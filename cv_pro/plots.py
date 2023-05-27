@@ -2,7 +2,7 @@
 """
 Created on Fri May 26 23:00:38 2023
 
-@author: David
+@author: David Hebert
 """
 import matplotlib.pyplot as plt
 

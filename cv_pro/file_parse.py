@@ -2,7 +2,7 @@
 """
 Created on Fri May 26 20:35:57 2023
 
-@author: David
+@author: David Hebert
 """
 import struct
 import pandas as pd
