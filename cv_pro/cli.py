@@ -20,7 +20,7 @@ Command Line Arguments
     The maximum distance (given in V) between two peaks for them to be considered
     "reversible". If the distance between two peaks if within the limit, E_half
     calculations will be attempted (see :meth:`~cv_pro.process.Voltammogram.find_Ehalfs`).
--r, --root_dir : string, optional
+-rd, --root_dir : string, optional
     Set a root directory for where data files are located so you don't have to
     type a full file path every time. For example, if all your CV data is
     stored inside some main directory ``C:/mydata/CV Data/``, you can
