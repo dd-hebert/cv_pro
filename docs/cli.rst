@@ -1,0 +1,1 @@
+.. automodule:: cv_pro.cli

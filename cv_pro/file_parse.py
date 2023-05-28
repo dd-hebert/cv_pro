@@ -1,13 +1,32 @@
 # -*- coding: utf-8 -*-
 """
-Created on Fri May 26 20:35:57 2023
+Parse CV data .bin files from CH Instruments ch760e electrochemical analyzer.
+
+Created on Fri May 26 2023
 
 @author: David Hebert
 """
 import struct
 import pandas as pd
 
+
 def parse_bin_file(path):
+    """
+    Parse CV data .bin file.
+
+    Parameters
+    ----------
+    path : str
+        A file path to a .bin file containing CV data.
+
+    Returns
+    -------
+    parameters : dict
+        A dictionary containing the experimental parameters.
+    voltammogram : list
+        A list of :class:`pandas.DataFrame` objects containing the CV data.
+
+    """
     print('Reading bin file...')
     with open(path, 'rb') as bin_file:
         file_bytes = bin_file.read()  # Bytes from binary file
@@ -50,13 +69,13 @@ def parse_bin_file(path):
     for i in range(1445, len(file_bytes), 4):
         current.append(struct.unpack('<f', file_bytes[i: i + 4])[0])
         potential.append(round(v, 3))
-    
+
         # Change sweep direction when v = to the high or low limit
         if round(v, 3) == parameters['high_E'] or round(v, 3) == parameters['low_E']:
             sweep_direction *= -1
             segment_indices.append(len(potential) - 1)
         v += round(parameters['sample_interval'] * sweep_direction, 3)
-    
+
     # Add end index of final segment
     segment_indices.append(len(potential) - 1)
 
