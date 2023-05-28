@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Read CV binary files.
+Process CV data.
 
 Created on Thu May 25 2023
 

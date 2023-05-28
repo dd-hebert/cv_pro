@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Parse CV data .bin files from CH Instruments ch760e electrochemical analyzer.
+Parse CV data .bin files from CH Instruments CHI760e electrochemical workstation.
 
 Created on Fri May 26 2023
 
