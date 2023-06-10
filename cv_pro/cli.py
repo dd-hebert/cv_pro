@@ -54,7 +54,6 @@ import argparse
 import os
 import pickle
 from cv_pro.process import Voltammogram
-# from cv_pro.plots import plot_CV
 from cv_pro.plots import CV_Plot
 from cv_pro.file_picker import FilePicker
 from cv_pro.export_csv import export_csv
@@ -64,7 +63,7 @@ def main():
     """
     Prehandle command line args.
 
-    Handles the args ``-qq``, ``-crd``, ``-r``, ``-grd``, ``-tr``, and ``-fp``
+    Handles the args ``-qq``, ``-crd``, ``-rd``, ``-grd``, ``-tr``, and ``-fp``
     before starting the processing routine :func:`~cv_pro.cli.proc()`.
 
     Raises
