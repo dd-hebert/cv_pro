@@ -18,9 +18,9 @@ def export_csv(voltammogram, data_start=1, segments=0):
     voltammogram : :class:`~cv_pro.process.Voltammogram`
         The voltammogram to export.
     data_start : int, optional
-        The first sweep to export. The default is 1.
+        The first segment to export. The default is 1.
     segments : int, optional
-        The total number of sweeps to export. The default is 0 (all sweeps).
+        The total number of segments to export. The default is 0 (all segments).
 
     Returns
     -------
@@ -55,10 +55,10 @@ def export_csv(voltammogram, data_start=1, segments=0):
 
     # Export all CV data, name files by index in given list of CV data
     if data_start == 1 and segments == 0:
-        for i, sweep in enumerate(cv_data):
-            sweep.to_csv(os.path.join(output_dir, f'{str(i+1).zfill(digits)}.csv'), index=False)
+        for i, segment in enumerate(cv_data):
+            segment.to_csv(os.path.join(output_dir, f'{str(i+1).zfill(digits)}.csv'), index=False)
 
-    # Export chosen CV data, name files by sweep # in given list of CV data
+    # Export chosen CV data, name files by segment # in given list of CV data
     else:
         for i in range(data_start - 1, data_start + segments - 1):
             cv_data[i].to_csv(os.path.join(output_dir, f'{str(i+1).zfill(digits)}.csv'), index=False)

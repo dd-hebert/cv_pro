@@ -35,9 +35,9 @@ Command Line Arguments
     the data set is shown. Default is False.
 -t, --trim : int int, optional
     Use ``trim`` to select a specific portion of the CV data. The first value
-    ``trim[0]`` is the first sweep to plot or export, and the second value
-    ``trim[1]`` is the total number of sweeps to plot or export. For example,
-    to show the data starting from the 2nd sweep and show 2 sweeps, use
+    ``trim[0]`` is the first segment to plot or export, and the second value
+    ``trim[1]`` is the total number of segments to plot or export. For example,
+    to show the data starting from the 2nd segment and show 2 segments, use
     ``-t 2 2``.
 -tr, --tree : flag, optional
     Print the ``root_directory`` file tree to the console.
@@ -54,7 +54,8 @@ import argparse
 import os
 import pickle
 from cv_pro.process import Voltammogram
-from cv_pro.plots import plot_CV
+# from cv_pro.plots import plot_CV
+from cv_pro.plots import CV_Plot
 from cv_pro.file_picker import FilePicker
 from cv_pro.export_csv import export_csv
 
@@ -163,7 +164,7 @@ def proc(__args):
 
         print('\nPlotting data...')
 
-        plot_CV(data, view_only=True)
+        CV_Plot(data, view_only=True)
 
     else:
         # Get CV data
@@ -173,7 +174,7 @@ def proc(__args):
 
         # Plot CV data
         if __args.trim is None:
-            plot_CV(data)
+            CV_Plot(data)
         else:
             data_start, segments = __args.trim
 
@@ -184,7 +185,7 @@ def proc(__args):
             if data_start + segments > len(data.voltammogram) or segments == 0:
                 segments = len(data.voltammogram) - (data_start - 1)
 
-            plot_CV(data, data_start, segments)
+            CV_Plot(data, data_start, segments)
 
         def prompt_for_export():
             """
@@ -226,9 +227,9 @@ def get_args():
         'path': 'Process .bin CV data file at the given path.',
         'ferrocenium': 'Set the relative potential of the Fc/Fc+ couple.',
         'peak_sep_limit': 'Set the peak separation limit in V when finding E1/2s.',
-        'trim': '''2 args: Trim data from sweep __ and show __ total sweeps.
-                    The first value is the first sweep to plot and the second
-                    value is the value is the total number of sweeps to plot.''',
+        'trim': '''2 args: Trim data from segment __ and show __ total segments.
+                    The first value is the first segment to plot and the second
+                    value is the value is the total number of segments to plot.''',
         'root_dir': '''Set a root directory where data files are located so you
                        don't have to type a full path every time.''',
         'get_root_dir': '''Print the root directory to the console.''',
