@@ -44,6 +44,8 @@ Command Line Arguments
 -fp, --file_picker : flag, optional
     Interactively pick a .bin file from the console. The file is opened in view
     only mode.
+-pub, --pub_quality : flag, optional
+    Generate a publication-quality plot.
 
 Created on Sat May 27 2023
 
@@ -59,9 +61,167 @@ from cv_pro.file_picker import FilePicker
 from cv_pro.export_csv import export_csv
 
 
+def handle_test_mode(args):
+    r"""
+    Handle the test mode functionality. NOT YET IMPLEMENTED.
+
+    `-qq`
+
+    Test mode only works from inside the repo \...\cv_pro\cv_pro.
+
+    Parameters
+    ----------
+    args : :class:`argparse.Namespace`
+        Parsed command-line arguments.
+
+    Returns
+    -------
+    None.
+
+    """
+    pass
+
+
+def get_root_pickle():
+    """
+    Return the path to the root directory pickle file.
+
+    Returns
+    -------
+    str
+        The path to the root directory pickle file.
+
+    """
+    parent_directory = os.path.abspath(os.path.join(__file__, os.pardir))
+    root_pickle = os.path.normpath(os.path.join(parent_directory, 'root_directory.pickle'))
+
+    return root_pickle
+
+
+def save_root_directory(args, root_pickle):
+    """
+    Save a new root directory.
+
+    `-rd`
+
+    Parameters
+    ----------
+    args : :class:`argparse.Namespace`
+        Parsed command-line arguments.
+    root_pickle : str
+        The path to the root directory pickle file.
+
+    Returns
+    -------
+    None.
+
+    """
+    if os.path.exists(os.path.normpath(args.root_dir)):
+        with open(root_pickle, 'wb') as f:
+            pickle.dump(args.root_dir, f)
+        print(f'New root directory: {args.root_dir}')
+    else:
+        print('Error: Directory does not exist.')
+
+
+def handle_root_directory(args, root_pickle):
+    """
+    Load or clear the root directory from the root directory pickle file.
+
+    `-grd`, `-crd`
+
+    Parameters
+    ----------
+    args : :class:`argparse.Namespace`
+        Parsed command-line arguments.
+    root_pickle : str
+        The path to the root directory pickle file.
+
+    Returns
+    -------
+    str or None
+        The root directory or None if the pickle file doesn't exist.
+
+    """
+    if os.path.exists(root_pickle):
+        if args.clear_root_dir is True:  # [-crd]
+            os.remove(root_pickle)
+            root_dir = None
+            print('Cleared root directory.')
+        else:
+            with open(root_pickle, 'rb') as f:
+                root_dir = pickle.load(f)
+    else:
+        root_dir = None
+
+    return root_dir
+
+
+def handle_file_picker(args, root_dir):
+    """
+    Handle the file picker functionality.
+
+    `-fp`
+
+    Parameters
+    ----------
+    args : :class:`argparse.Namespace`
+        Parsed command-line arguments.
+    root_dir : str or None
+        The root directory.
+
+    Returns
+    -------
+    None.
+
+    """
+    if root_dir is not None:
+        if args.file_picker is True:
+            args.path = FilePicker(root_dir, '.bin').pick_file()
+            args.view = True
+    
+        if args.tree is True:  # [-tr]
+            FilePicker(root_dir, '.bin').tree()
+
+
+def handle_path(args, root_dir):
+    """
+    Path handling and runs the proc script.
+
+    Parameters
+    ----------
+    args : :class:`argparse.Namespace`
+        Parsed command-line arguments.
+    root_dir : str or None
+        The root directory.
+
+    Raises
+    ------
+    FileNotFoundError
+        Raised if the given file path cannot be found.
+
+    Returns
+    -------
+    None.
+
+    """
+    if args.path is not None:
+        current_dir = os.getcwd()
+        path_exists = os.path.exists(os.path.join(current_dir, args.path))
+
+        if path_exists:
+            args.path = os.path.join(current_dir, args.path)
+            proc(args)
+        elif root_dir is not None and os.path.exists(os.path.join(root_dir, args.path)):
+            args.path = os.path.join(root_dir, args.path)
+            proc(args)
+        else:
+            raise FileNotFoundError(f'No such file or directory could be found: "{args.path}"')
+
+
 def main():
     """
-    Prehandle command line args.
+    Prehandles command line args.
 
     Handles the args ``-qq``, ``-crd``, ``-rd``, ``-grd``, ``-tr``, and ``-fp``
     before starting the processing routine :func:`~cv_pro.cli.proc()`.
@@ -76,81 +236,42 @@ def main():
     None.
 
     """
-    __args = get_args()
+    args = get_args()
 
-    # Testing mode [-qq]
-    # Not yet implemented
-    if __args.test_mode is True:
-        pass
+    # Test mode [-qq]
+    if args.test_mode is True:
+        handle_test_mode(args)
+        return
 
-    else:
-        parent_directory = os.path.abspath(os.path.join(__file__, os.pardir))
-        root_pickle = os.path.normpath(
-            os.path.join(parent_directory, 'root_directory.pickle'))
+    root_pickle = get_root_pickle()
 
-        # Save new root directory [-rd]
-        if __args.root_dir is not None:
-            if os.path.exists(os.path.normpath(__args.root_dir)):
-                with open(root_pickle, 'wb') as f:
-                    pickle.dump(__args.root_dir, f)
-                print(f'New root directory: {__args.root_dir}')
-            else:
-                print('Error: Directory does not exist.')
+    if args.root_dir is not None:
+        # Root dir [-rd]
+        save_root_directory(args, root_pickle)
 
-        # Handle loading or clearing root directory
-        if os.path.exists(root_pickle):
-            if __args.clear_root_dir is True:  # [-crd]
-                os.remove(root_pickle)
-                __root = None
-                print('Cleared root directory.')
-            else:  # Load root directory
-                with open(root_pickle, 'rb') as f:
-                    __root = pickle.load(f)
-        else:
-            __root = None
+    # Load or clear [-crd] root dir
+    root_dir = handle_root_directory(args, root_pickle)
 
-        # Print root directory [-gdr]
-        if __args.get_root_dir is True:
-            print(f'root directory: {__root}')
+    # Print root directory [-gdr]
+    if args.get_root_dir is True:
+        print(f'root directory: {root_dir}')
 
-        # File picker [-fp]
-        if __args.file_picker is True:
-            if __root is not None:
-                __args.path = FilePicker(__root, '.bin').pick_file()
-                __args.view = True
+    # File picker [-fp] and tree [-tr]
+    handle_file_picker(args, root_dir)
 
-        if __args.tree is True:  # [-tr]
-            FilePicker(__root, '.bin').tree()
-
-        # Path handling and run proc script
-        if __args.path is not None:
-            '''
-            First check if the given path exists in the current working directory
-            or by absolute path. The absolute path will be checked if the given
-            path is in a different drive than the current working directory.
-            '''
-            if os.path.exists(os.path.join(os.getcwd(), __args.path)):
-                __args.path = os.path.join(os.getcwd(), __args.path)
-                proc(__args)
-            # Secondly, check for given path inside root directory.
-            elif __root is not None and os.path.exists(os.path.join(__root, __args.path)):
-                __args.path = os.path.join(__root, __args.path)
-                proc(__args)
-            else:
-                raise FileNotFoundError(
-                    f'No such file or directory could be found: "{__args.path}"')
+    handle_path(args, root_dir)
 
 
-def proc(__args):
+def proc(args):
     """
     Process data.
 
     Initializes a :class:`~cv_pro.process.Voltammogram` with the
-    given ``__args``, plots the result, and prompts the user for exporting.
+    given ``args``, plots the result, and prompts the user for exporting.
 
     Parameters
     ----------
-    __args : :class:`argparse.Namespace`
+    args : :class:`argparse.Namespace`
         Holds the arguments given at the command line.
 
     Returns
@@ -158,45 +279,28 @@ def proc(__args):
     None.
 
     """
-    if __args.view is True:
-        data = Voltammogram(__args.path, view_only=True)
+    if args.view is True:
+        data = Voltammogram(args.path, view_only=True)
+        data_start, segments = _check_trim_values(args, data)
 
         print('\nPlotting data...')
 
-        CV_Plot(data, view_only=True)
+        CV_Plot(data,
+                plot_start=data_start,
+                plot_segments=segments, view_only=True)
 
     else:
-        # Get CV data
-        data = Voltammogram(__args.path,
-                            reference=__args.ferrocenium,
-                            peak_sep_limit=__args.peak_sep_limit)
+        data = Voltammogram(args.path,
+                            reference=args.ferrocenium,
+                            peak_sep_limit=args.peak_sep_limit)
+        data_start, segments = _check_trim_values(args, data)
 
-        # Plot CV data
-        if __args.trim is None:
-            CV_Plot(data)
-        else:
-            data_start, segments = __args.trim
-
-            # Check values
-            if data_start > len(data.voltammogram):
-                data_start = len(data.voltammogram) - 1
-
-            if data_start + segments > len(data.voltammogram) or segments == 0:
-                segments = len(data.voltammogram) - (data_start - 1)
-
-            CV_Plot(data, data_start, segments)
+        CV_Plot(data,
+                plot_start=data_start,
+                plot_segments=segments,
+                pub_quality=args.pub_quality)
 
         def prompt_for_export():
-            """
-            Ask the user if they wish to export the processed data.
-
-            Accepts a Y or N response.
-
-            Returns
-            -------
-            None. Calls :func:`~cv_pro.export_csv.export_csv`.
-
-            """
             # Ask user if data should be exported
             user_input = input('\nExport CV data? (Y/N): ')
 
@@ -236,8 +340,8 @@ def get_args():
         'view': '''Enable view only mode (no data processing).''',
         'tree': 'Show the root directory file tree.',
         'file_picker': 'Choose a .bin file interactively from the command line instead of using -p.',
-        'test_mode': 'For testing purposes.'
-                }
+        'pub_quality': 'Generate a publication-quality plot.',
+        'test_mode': 'For testing purposes.'}
 
     parser.add_argument('-p',
                         '--path',
@@ -308,6 +412,12 @@ def get_args():
                         default=False,
                         help=help_msg['file_picker'])
 
+    parser.add_argument('-pub',
+                        '--pub_quality',
+                        action='store_true',
+                        default=False,
+                        help=help_msg['pub_quality'])
+
     parser.add_argument('-qq',
                         '--test_mode',
                         action='store_true',
@@ -315,3 +425,15 @@ def get_args():
                         help=help_msg['test_mode'])
 
     return parser.parse_args()
+
+
+def _check_trim_values(args, voltammogram):
+    data_start, segments = args.trim
+
+    if data_start > len(voltammogram.voltammogram):
+        data_start = len(voltammogram.voltammogram) - 1
+
+    if data_start + segments > len(voltammogram.voltammogram) or segments == 0:
+        segments = len(voltammogram.voltammogram) - (data_start - 1)
+
+    return data_start, segments

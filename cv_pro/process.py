@@ -9,6 +9,7 @@ Created on Thu May 25 2023
 
 import os
 import scipy
+import pandas as pd
 from cv_pro.file_parse import parse_bin_file
 
 
@@ -31,6 +32,10 @@ class Voltammogram:
         detected in each CV segment.
     E_halfs : list
         A list of lists containing the E1/2s for each segment.
+    corrected_voltammogram : list
+        A list of :class:`pandas.DataFrame` objects containing the cCV data for
+        each segment with the x-axis adjusted relative to the ferrocenium redox
+        couple.
     """
 
     def __init__(self, path, reference=0, peak_sep_limit=0.2, view_only=False):
@@ -67,9 +72,13 @@ class Voltammogram:
         self.reference = reference
         self.peak_sep_limit = peak_sep_limit
 
-        if view_only is False:
+        if not view_only:
             self.peaks = self.find_peaks()
             self.E_halfs, self.peak_separations = self.find_Ehalfs()
+            self._print_E_halfs(self.E_halfs, self.peak_separations)
+
+            if self.reference != 0:
+                self.corrected_voltammogram = self._relative_to_ferrocenium()
 
     def find_peaks(self):
         """
@@ -121,6 +130,9 @@ class Voltammogram:
             E_halfs.append(e_halfs)
             peak_separations.append(peak_sep)
 
+        return E_halfs, peak_separations
+
+    def _print_E_halfs(self, E_halfs, peak_separations):
         for i, (e_half, peak_sep) in enumerate(zip(E_halfs, peak_separations)):
             if i < len(E_halfs):
                 print(f'Segment {i + 1} to {i + 2}:')
@@ -129,4 +141,19 @@ class Voltammogram:
                     print(f'\tE1/2 (V): {value} ({round(peak_sep, 3)})')
         print('\n')
 
-        return E_halfs, peak_separations
+    def _relative_to_ferrocenium(self):
+        """
+        Convert the x-axis to be relative to the ferrocenium redox couple.
+
+        Returns
+        -------
+        :class:`pandas.DataFrame`
+            A :class:`pandas.DataFrame` containing the corrected CV data.
+
+        """
+        corrected_voltammogram = [pd.DataFrame(
+            {'Potential (V)': segment['Potential (V)'] - self.reference,
+             'Current (A)': segment['Current (A)']})
+            for segment in self.voltammogram]
+
+        return corrected_voltammogram

@@ -28,9 +28,25 @@ def parse_bin_file(path):
 
     """
     print('Reading bin file...')
-    with open(path, 'rb') as bin_file:
-        file_bytes = bin_file.read()  # Bytes from binary file
+    file_bytes = _open_bin_file(path)
+    parameters = _get_experimental_parameters(file_bytes)
+    _print_experimental_parameters(parameters)
+    current = _unpack_data(file_bytes, parameters)
+    potential, segment_indices = _build_segments(file_bytes, parameters)
+    voltammogram = _build_voltammogram(potential, current, segment_indices)
+    print('Success.')
 
+    return parameters, voltammogram
+
+
+def _open_bin_file(path):
+    with open(path, 'rb') as bin_file:
+        file_bytes = bin_file.read()
+
+    return file_bytes
+
+
+def _get_experimental_parameters(file_bytes):
     parameters = {}
     # Little endian float mode
     parameters['init_E'] = round(struct.unpack('<f', (file_bytes[845: 849]))[0], 3)  # V
@@ -47,27 +63,39 @@ def parse_bin_file(path):
     parameters['quiet_time'] = struct.unpack('<f', (file_bytes[889: 893]))[0]  # sec
 
     if parameters['init_scan_polarity'] == 1:
-        init_sweep_direction = 'Positive'
-        sweep_direction = 1
+        parameters['init_sweep_direction'] = (1, 'Positive')
     elif parameters['init_scan_polarity'] == 0:
-        init_sweep_direction = 'Negative'
-        sweep_direction = -1
+        parameters['init_sweep_direction'] = (-1, 'Negative')
 
+    return parameters
+
+
+def _print_experimental_parameters(parameters):
     print(f'Init E (V): {parameters["init_E"]}')
     print(f'Final E (V): {parameters["final_E"]}')
     print(f'High E (V): {parameters["high_E"]}')
     print(f'Low E (V): {parameters["low_E"]}')
     print(f'Scan Rate (V/s): {parameters["scan_rate"]}')
-    print(f'Initial Scan Polarity: {init_sweep_direction}')
+    print(f'Initial Scan Polarity: {parameters["init_sweep_direction"][1]}')
 
-    potential = []
-    current = []
+
+def _unpack_data(file_bytes, parameters):
+    data_start = 1445  # CV data begins at this byte
+    cv_data = file_bytes[data_start:]
+
+    current = [value for value, in struct.iter_unpack('<f', cv_data)]
+
+    return current
+
+
+def _build_segments(file_bytes, parameters):
+    data_start = 1445  # CV data begins at this byte
     segment_indices = [0]
+    sweep_direction = parameters['init_sweep_direction'][0]
     v = parameters['init_E']
+    potential = []
 
-    print('\nUnpacking data...')
-    for i in range(1445, len(file_bytes), 4):
-        current.append(struct.unpack('<f', file_bytes[i: i + 4])[0])
+    for i in range(data_start, len(file_bytes), 4):
         potential.append(round(v, 3))
 
         # Change sweep direction when v = to the high or low limit
@@ -79,14 +107,16 @@ def parse_bin_file(path):
     # Add end index of final segment
     segment_indices.append(len(potential) - 1)
 
-    # Build voltammogram
-    voltammogram = []
-    for i, _ in enumerate(segment_indices):
-        if i < len(segment_indices) - 1:
-            pot = potential[segment_indices[i]: segment_indices[i + 1]]
-            cur = current[segment_indices[i]: segment_indices[i + 1]]
-            voltammogram.append(pd.DataFrame({'Potential (V)': pot,
-                                              'Current (A)': cur}))
-    print('Success.')
+    return potential, segment_indices
 
-    return parameters, voltammogram
+
+def _build_voltammogram(potential, current, segment_indices):
+    voltammogram = []
+
+    for i in range(len(segment_indices) - 1):
+        pot = potential[segment_indices[i]:segment_indices[i + 1]]
+        cur = current[segment_indices[i]:segment_indices[i + 1]]
+        df = pd.DataFrame({'Potential (V)': pot, 'Current (A)': cur})
+        voltammogram.append(df)
+
+    return voltammogram
