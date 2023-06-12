@@ -211,11 +211,11 @@ class CV_Plot:
 
     def _add_sweep_direction_arrow(self, ax):
         segment_midpoint = len(self.data[self.plot_start - 1]) // 2
-        arrow_x1 = self.data[self.plot_start - 1].iloc[segment_midpoint][0] - self.reference
-        arrow_x2 = self.data[self.plot_start - 1].iloc[segment_midpoint + 20][0] - self.reference
+        arrow_x1 = self.data[self.plot_start - 1].iloc[segment_midpoint + 20][0] - self.reference
+        arrow_x2 = self.data[self.plot_start - 1].iloc[segment_midpoint][0] - self.reference
 
-        arrow_y1 = self.data[self.plot_start - 1].iloc[segment_midpoint][1]
-        arrow_y2 = self.data[self.plot_start - 1].iloc[segment_midpoint + 20][1]
+        arrow_y1 = self.data[self.plot_start - 1].iloc[segment_midpoint + 20][1]
+        arrow_y2 = self.data[self.plot_start - 1].iloc[segment_midpoint][1]
 
         arrow_width = 0.5
         arrow_headwidth = 6
