@@ -6,6 +6,5 @@ API Reference
 
    export_csv
    file_parse
-   file_picker
    plots
    process
