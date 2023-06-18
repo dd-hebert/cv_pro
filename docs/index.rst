@@ -9,6 +9,7 @@ cv_pro Documentation
    quickstart
    filepaths
    cli
+   multiview
    modules
 
 Indices and tables

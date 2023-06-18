@@ -8,3 +8,5 @@ API Reference
    file_parse
    plots
    process
+   config
+   filepicker

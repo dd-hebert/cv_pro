@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cv_pro"
-version = "0.0.6"
+version = "0.0.7"
 authors = [
   { name="David Hebert", email="david@ddhebert.com" },
 ]
@@ -50,7 +50,8 @@ dependencies = [
 ]
 
 [project.scripts]
-cvp = "cv_pro.cli:main"
+cvp = "cv_pro.scripts.cli:main"
+cvpmv = "cv_pro.scripts.multiview:main"
 
 [project.urls]
 "repository" = "https://github.com/dd-hebert/cv_pro"

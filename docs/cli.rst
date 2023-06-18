@@ -1,3 +1,3 @@
 Command Line Interface
 ======================
-.. automodule:: cv_pro.cli
+.. automodule:: cv_pro.scripts.cli
