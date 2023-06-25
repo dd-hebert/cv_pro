@@ -54,6 +54,7 @@ class FilePicker:
 
         """
         print(f'Searching "{self.root}" for {self.ext} files...')
+
         file_list = [
             (
                 os.path.relpath(path, self.root),
@@ -63,7 +64,7 @@ class FilePicker:
 
         file_list = [(folder, files) for folder, files in file_list if files]
 
-        if file_list == []:
+        if not file_list:
             return None
 
         return file_list
