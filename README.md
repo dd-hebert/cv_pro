@@ -19,7 +19,7 @@ With ``cv_pro`` installed, you can run the script directly from the command line
 cvp -p path\to\your\data.bin
 ```
 
-**Tip:** You can use short paths by setting the **root directory** or opening a terminal session inside the same folder your data files are located.
+**Tip:** You can use shorter paths by setting a **root directory** or by simply opening a terminal session inside the same folder as your data files.
 
 
 Command Line Arguments
@@ -30,13 +30,13 @@ The path to the CV data .bin file. You can use a path relative to the current wo
 ___
 
 #### ``-crd``, ``-–clear_root_dir`` : flag, optional
-Clear the current root directory (deletes ``root_directory.pickle``).
+Reset the root directory back to the default location (in the user's home directory).
 
 #### ``-fc``, ``--ferrocenium`` : float, optional
 Set the relative potential of the Fc/Fc<sup>+</sup> redox couple (given in V) to adjust the x-axis for data reporting.
 
 #### ``-fp``, ``--file_picker`` : flag, optional
-Interactively pick a .bin file from the console. The file is opened in view only mode.
+Interactively pick a .bin file from the terminal. The file is opened in view only mode.
 
 #### ``-grd``, ``–-get_root_dir`` : flag, optional
 Print the current root directory to the console.
@@ -44,8 +44,8 @@ Print the current root directory to the console.
 #### ``-h``, ``--help`` : flag
 Use ``-h`` to get help with command line arguments.
 
-#### ``-rd``, ``-–root_dir`` : string (optional)
-Set the root directory so you don’t have to type full length file paths. For example, if all your CV data files are stored inside a common folder, you can set it as the root directory. Then, the path you give with ``-p`` is assumed to be inside the root directory. With a root directory set, you no longer have to type it in the file path.
+#### ``-rd``, ``-–root_dir`` : string, optional
+Set the root directory so you don’t have to type full length file paths. For example, if all your CV data files are stored inside a common folder, you can set it as the root directory. Then, the path you give with ``-p`` is assumed to be inside the root directory. With a root directory set, you'll no longer have to type the root directory portion of the file path.
 
 **Without root directory:**
 ```
@@ -64,7 +64,7 @@ cvp -rd C:\mydata\CV_Data
 cvp -p mydata.bin
 ```
 
-With a root directory set, the root directory portion of the path can be omitted. The root directory is saved between runs as a file ``root_directory.pickle``.
+With a root directory set, the root directory portion of the path can be omitted. The root directory is saved between runs in a config file.
 
 #### ``-sep``, ``--peak_sep_limit`` : float, optional
 The maximum distance (given in V) between two peaks for them to be considered "reversible". If the distance between two peaks if within the limit, E<sub>1/2</sub> calculations will be attempted.
@@ -92,8 +92,7 @@ Coming soon.
 
 Uninstall
 ---------
-To uninstall ``cv_pro`` and remove all files associated with it, run the following commands:
+To uninstall ``cv_pro``, run the following command:
 ```
-cvp -crd
 pip uninstall cv_pro
 ```
