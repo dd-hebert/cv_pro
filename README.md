@@ -90,6 +90,33 @@ Examples
 --------
 Coming soon.
 
+Multiview Mode
+--------------
+You can open multiple .bin files (in view-only mode) from the command line at once with the ``Multiviewer`` script. Navigate to a directory containing .bin files and run the command:
+```
+cvpmv -f some search filters
+```
+
+The script will open .bin files which contain any of the supplied search filters in view_only mode.
+
+The default search behavior is an *OR* search. You can use supply the ``-a`` or ``--and_filter`` argument to perform an *AND* search:
+```
+cvpmv -f some search filters -a
+```
+
+Now only .bin files with contain *all* of the search filters in their name will be opened.
+
+**Examples:**
+```
+cvpmv -f copper DMF
+```
+OR search, open .bin files with ``copper`` *OR* ``DMF`` in their filename.
+
+```
+cvpmv -f copper DMF FcPF6 -a
+```
+AND search, open .bin files with ``copper``, ``DMF``, *AND* ``FcPF6`` in their filename.
+
 Uninstall
 ---------
 To uninstall ``cv_pro``, run the following command:
