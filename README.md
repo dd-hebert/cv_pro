@@ -45,7 +45,7 @@ Print the current root directory to the console.
 Use ``-h`` to get help with command line arguments.
 
 #### ``-rd``, ``-–root_dir`` : string, optional
-Set the root directory so you don’t have to type full length file paths. For example, if all your CV data files are stored inside a common folder, you can set it as the root directory. Then, the path you give with ``-p`` is assumed to be inside the root directory. With a root directory set, you'll no longer have to type the root directory portion of the file path.
+Specify a root directory to simplify file path entry. For instance, if you store all your CV data files in a common folder, you can designate it as the root directory. Subsequently, any path provided with ``-p`` is assumed to be relative to the root directory.
 
 **Without root directory:**
 ```
@@ -64,7 +64,7 @@ cvp -rd C:\mydata\CV_Data
 cvp -p mydata.bin
 ```
 
-With a root directory set, the root directory portion of the path can be omitted. The root directory is saved between runs in a config file.
+By setting a root directory, you can omit the root directory part of the path. The root directory is saved between runs in a config file.
 
 #### ``-sep``, ``--peak_sep_limit`` : float, optional
 The maximum distance (given in V) between two peaks for them to be considered "reversible". If the distance between two peaks if within the limit, E<sub>1/2</sub> calculations will be attempted.
