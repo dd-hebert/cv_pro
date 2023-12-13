@@ -50,7 +50,8 @@ class FilePicker:
 
         Returns
         -------
-        None.
+        file_list : list
+            A list of files.
 
         """
         print(f'Searching "{self.root}" for {self.ext} files...')

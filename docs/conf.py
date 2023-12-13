@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.abspath(".."))
 project = 'cv_pro'
 copyright = '2023, David Hebert'
 author = 'David Hebert'
-release = '0.0.7'
+release = '0.0.71'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

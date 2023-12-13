@@ -97,15 +97,12 @@ def _build_segments(file_bytes, parameters):
 
     for i in range(data_start, len(file_bytes), 4):
         potential.append(round(v, 3))
+        v += round(parameters['sample_interval'] * sweep_direction, 3)
 
         # Change sweep direction when v = to the high or low limit
         if round(v, 3) == parameters['high_E'] or round(v, 3) == parameters['low_E']:
             sweep_direction *= -1
             segment_indices.append(len(potential) - 1)
-        v += round(parameters['sample_interval'] * sweep_direction, 3)
-
-    # Add end index of final segment
-    segment_indices.append(len(potential) - 1)
 
     return potential, segment_indices
 
