@@ -20,7 +20,7 @@ Command Line Arguments
     The maximum distance (given in V) between two peaks for them to be considered
     "reversible". If the distance between two peaks if within the limit, E_half
     calculations will be attempted (see :meth:`~cv_pro.process.Voltammogram.find_Ehalfs`).
--rd, --root_dir : string, optional
+-srd, --set_root_dir : string, optional
     Set a root directory for where data files are located so you don't have to
     type a full file path every time. For example, if all your CV data is
     stored inside some main directory ``C:/mydata/CV Data/``, you can
@@ -39,7 +39,7 @@ Command Line Arguments
     ``trim[1]`` is the total number of segments to plot or export. For example,
     to show the data starting from the 2nd segment and show 2 segments, use
     ``-t 2 2``.
--tr, --tree : flag, optional
+--tree : flag, optional
     Print the ``root_directory`` file tree to the console.
 -fp, --file_picker : flag, optional
     Interactively pick a .bin file from the console. The file is opened in view
@@ -97,7 +97,7 @@ class CLI:
             'trim': '''2 args: Trim data from segment __ and show __ total segments.
                         The first value is the first segment to plot and the second
                         value is the value is the total number of segments to plot.''',
-            'root_dir': '''Set a root directory where data files are located so you
+            'set_root_dir': '''Set a root directory where data files are located so you
                            don't have to type a full path every time.''',
             'get_root_dir': '''Print the root directory to the console.''',
             'clear_root_dir': '''Clear the current root directory.''',
@@ -139,12 +139,12 @@ class CLI:
                             metavar='',
                             help=help_msg['trim'])
 
-        parser.add_argument('-rd',
-                            '--root_dir',
+        parser.add_argument('-srd',
+                            '--set_root_dir',
                             action='store',
                             default=None,
                             metavar='',
-                            help=help_msg['root_dir'])
+                            help=help_msg['set_root_dir'])
 
         parser.add_argument('-grd',
                             '--get_root_dir',
@@ -164,8 +164,7 @@ class CLI:
                             default=False,
                             help=help_msg['view'])
 
-        parser.add_argument('-tr',
-                            '--tree',
+        parser.add_argument('--tree',
                             action='store_true',
                             default=False,
                             help=help_msg['tree'])
@@ -277,7 +276,7 @@ class CLI:
                 self.args.path = FilePicker(root_dir, '.bin').pick_file()
                 self.args.view = True
 
-            if self.args.tree is True:  # [-tr]
+            if self.args.tree is True:  # [--tree]
                 FilePicker(root_dir, '.bin').tree()
 
     def handle_path(self, root_dir):
@@ -313,7 +312,7 @@ class CLI:
         """
         Prehandles command line args.
 
-        Handles the args ``-qq``, ``-crd``, ``-rd``, ``-grd``, ``-tr``, and ``-fp``.
+        Handles the args ``-qq``, ``-crd``, ``-srd``, ``-grd``, ``--tree``, and ``-fp``.
         Then handles the path before starting the processing routine
         :meth:`~cv_pro.scripts.cli.CLI.proc()`.
 
@@ -326,8 +325,8 @@ class CLI:
             self.handle_test_mode()  # [-qq]
             return
 
-        if self.args.root_dir is not None:
-            self.modify_root_dir(self.args.root_dir)  # [-rd]
+        if self.args.set_root_dir is not None:
+            self.modify_root_dir(self.args.set_root_dir)  # [-srd]
 
         if self.args.clear_root_dir is True:
             self.reset_root_dir()  # [-crd]
@@ -337,7 +336,7 @@ class CLI:
         if self.args.get_root_dir is True:
             print(f'root directory: {root_dir}')  # [-gdr]
 
-        self.handle_file_picker(root_dir)  # [-fp] [-tr]
+        self.handle_file_picker(root_dir)  # [-fp] [--tree]
 
         if self.args.path is not None:
             self.handle_path(root_dir)
