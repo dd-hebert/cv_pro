@@ -7,6 +7,7 @@ Created on Fri May 26 2023
 @author: David Hebert
 """
 import matplotlib.pyplot as plt
+from cv_pro.utils.helpers import check_start_and_segments
 
 
 class CV_Plot:
@@ -48,18 +49,18 @@ class CV_Plot:
             True, `plot_start` and `plot_segments` will have no effect.
         pub_quality : bool, optional
             Generate a publicatoin-quality plot. The default is False.
-
         """
         self.voltammogram = voltammogram
         self.reference = voltammogram.reference
         self.name = voltammogram.name
         self.data = voltammogram.voltammogram
-        self.plot_start = plot_start
-        self.plot_segments = plot_segments
 
         if view_only:
+            self.plot_start = 1
+            self.plot_segments = len(self.data)
             self.plot_CV(view_only=view_only)
         else:
+            self.plot_start, self.plot_segments = check_start_and_segments(self.data, plot_start, plot_segments)
             self.peaks = voltammogram.peaks
             self.E_halfs = voltammogram.E_halfs
             self.peak_separations = voltammogram.peak_separations
@@ -82,7 +83,6 @@ class CV_Plot:
         view_only : bool, optional
             Specify if peaks and E1/2s are also plotted. The default is False. If
             True, `plot_start` and `plot_segments` will have no effect.
-
         """
         fig, ax = self._create_plot()
 
@@ -108,7 +108,6 @@ class CV_Plot:
             The first segment to plot. The default is 1.
         plot_segments : int, optional
             The total number of segments to plot. The default is 0 (all segments plotted).
-
         """
         fig, ax = self._create_plot()
         plt.title(None)
@@ -211,11 +210,11 @@ class CV_Plot:
 
     def _add_sweep_direction_arrow(self, ax):
         segment_midpoint = len(self.data[self.plot_start - 1]) // 2
-        arrow_x1 = self.data[self.plot_start - 1].iloc[segment_midpoint + 20][0] - self.reference
-        arrow_x2 = self.data[self.plot_start - 1].iloc[segment_midpoint][0] - self.reference
+        arrow_x1 = self.data[self.plot_start - 1]['Potential (V)'].iloc[segment_midpoint + 20] - self.reference
+        arrow_x2 = self.data[self.plot_start - 1]['Potential (V)'].iloc[segment_midpoint] - self.reference
 
-        arrow_y1 = self.data[self.plot_start - 1].iloc[segment_midpoint + 20][1]
-        arrow_y2 = self.data[self.plot_start - 1].iloc[segment_midpoint][1]
+        arrow_y1 = self.data[self.plot_start - 1]['Current (A)'].iloc[segment_midpoint + 20]
+        arrow_y2 = self.data[self.plot_start - 1]['Current (A)'].iloc[segment_midpoint]
 
         arrow_width = 0.5
         arrow_headwidth = 6

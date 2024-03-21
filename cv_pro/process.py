@@ -60,11 +60,9 @@ class Voltammogram:
             Indicate whether data processing (peak finding and E1/2 calculations)
             should be performed. Default is False (processing performed).
 
-
         Returns
         -------
         None.
-
         """
         self.path = path
         self.name = os.path.basename(self.path)
@@ -76,7 +74,6 @@ class Voltammogram:
             self.peaks = self.find_peaks()
             self.E_halfs, self.peak_separations = self.find_Ehalfs()
             self._print_E_halfs(self.E_halfs, self.peak_separations)
-
             if self.reference != 0:
                 self.corrected_voltammogram = self._relative_to_ferrocenium()
 
@@ -88,7 +85,6 @@ class Voltammogram:
         -------
         peaks : list
             Returns a list of :func:`scipy.signal.find_peaks()` results.
-
         """
         peaks = []
 
@@ -105,7 +101,6 @@ class Voltammogram:
         -------
         E_halfs : list
             List of lists containing the E1/2s for each segment.
-
         """
         print('\nFinding E1/2s...')
         E_halfs = []
@@ -149,7 +144,6 @@ class Voltammogram:
         -------
         :class:`pandas.DataFrame`
             A :class:`pandas.DataFrame` containing the corrected CV data.
-
         """
         corrected_voltammogram = [pd.DataFrame(
             {'Potential (V)': segment['Potential (V)'] - self.reference,

@@ -66,6 +66,7 @@ class FilePicker:
         file_list = [(folder, files) for folder, files in file_list if files]
 
         if not file_list:
+            print('No files found.')
             return None
 
         return file_list

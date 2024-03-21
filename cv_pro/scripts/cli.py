@@ -71,7 +71,6 @@ class CLI:
         Parsed command-line arguments.
     config : :class:`configparser.ConfigParser`
         The current CLI settings configuration.
-
     """
 
     def __init__(self):
@@ -87,7 +86,6 @@ class CLI:
         Returns
         -------
         parser : :class:`argparse.ArgumentParser`
-
         """
         parser = argparse.ArgumentParser(description='Process CV Data Files')
         help_msg = {
@@ -197,7 +195,6 @@ class CLI:
         -------
         Config : :class:`configparser.ConfigParser`
             The current configuration.
-
         """
         return Config()
 
@@ -209,7 +206,6 @@ class CLI:
         -------
         str
             The path to the root directory.
-
         """
         return self.config.config['Settings']['root_directory']
 
@@ -225,7 +221,6 @@ class CLI:
         Returns
         -------
         None.
-
         """
         self.config.modify('Settings', 'root_directory', directory)
 
@@ -236,7 +231,6 @@ class CLI:
         Returns
         -------
         None.
-
         """
         self.config.reset()
 
@@ -251,7 +245,6 @@ class CLI:
         Returns
         -------
         None.
-
         """
         pass
 
@@ -269,7 +262,6 @@ class CLI:
         Returns
         -------
         None.
-
         """
         if root_dir is not None:
             if self.args.file_picker is True:
@@ -296,7 +288,6 @@ class CLI:
         Returns
         -------
         None.
-
         """
         current_dir = os.getcwd()
         path_exists = os.path.exists(os.path.join(current_dir, self.args.path))
@@ -307,6 +298,16 @@ class CLI:
             self.args.path = os.path.join(root_dir, self.args.path)
         else:
             raise FileNotFoundError(f'No such file or directory could be found: "{self.args.path}"')
+
+    def _prompt_for_export(self, data, data_start, segments):
+        user_input = input('\nExport CV data? (Y/N): ').strip().lower()
+
+        while user_input not in ['y', 'n']:
+            user_input = input('\nY/N: ').strip().lower()
+        if user_input == 'y':
+            export_csv(data, data_start, segments)
+        elif user_input == 'n':
+            pass
 
     def main(self):
         """
@@ -319,7 +320,6 @@ class CLI:
         Returns
         -------
         None.
-
         """
         if self.args.test_mode is True:
             self.handle_test_mode()  # [-qq]
@@ -352,54 +352,26 @@ class CLI:
         Returns
         -------
         None.
-
         """
         if self.args.view is True:
             data = Voltammogram(self.args.path, view_only=True)
-            data_start, segments = self._check_trim_values(data)
 
             print('\nPlotting data...')
-
-            CV_Plot(data,
-                    plot_start=data_start,
-                    plot_segments=segments, view_only=True)
+            CV_Plot(data, view_only=True)
 
         else:
             data = Voltammogram(self.args.path,
                                 reference=self.args.ferrocenium,
                                 peak_sep_limit=self.args.peak_sep_limit)
-            data_start, segments = self._check_trim_values(data)
 
+            print('\nPlotting data...')
+            data_start, segments = self.args.trim
             CV_Plot(data,
                     plot_start=data_start,
                     plot_segments=segments,
                     pub_quality=self.args.pub_quality)
 
-            def prompt_for_export():
-                # Ask user if data should be exported
-                user_input = input('\nExport CV data? (Y/N): ')
-
-                # Check user input is Y or N.
-                while user_input.lower() not in ['y', 'n']:
-                    user_input = input('\nY/N: ')
-                if user_input.lower() == 'y':
-                    pass
-                    export_csv(data, data_start, segments)
-                elif user_input.lower() == 'n':
-                    pass
-
-            prompt_for_export()
-
-    def _check_trim_values(self, voltammogram):
-        data_start, segments = self.args.trim
-
-        if data_start > len(voltammogram.voltammogram):
-            data_start = len(voltammogram.voltammogram) - 1
-
-        if data_start + segments > len(voltammogram.voltammogram) or segments == 0:
-            segments = len(voltammogram.voltammogram) - (data_start - 1)
-
-        return data_start, segments
+            self._prompt_for_export(data, data_start, segments)
 
 
 def main():
