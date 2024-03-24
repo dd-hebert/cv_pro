@@ -58,7 +58,7 @@ Without a root directory, you must type the full path to the data.
 **With root directory:**
 ```
 # Set the root directory
-cvp -rd C:\mydata\CV_Data
+cvp -srd C:\mydata\CV_Data
 
 # Only need short file path
 cvp -p mydata.bin
