@@ -2,6 +2,15 @@
 ==========
 ``cv_pro`` is a command line tool for processing CV data files (.bin format) created from the CH Instruments chi760e electrochemical workstation.
 
+Contents
+--------
+- [Installation](#installation)
+- [Command Line Interface](#command-line-interface)
+- [Command Line Arguments](#command-line-arguments)
+- [Examples](#examples)
+- [Multiview Mode](#multiview-mode)
+- [Uninstall](#uninstall)
+
 Installation
 ------------
 ``cv_pro`` can be installed directly from this repo using pip:
@@ -24,27 +33,46 @@ cvp -p path\to\your\data.bin
 
 Command Line Arguments
 ----------------------
+- [Data Processing Args](#data-processing-args)
+- [User Config Args](#user-config-args)
+- [Other Args](#other-args)
+
+### Data Processing Args
+Args related to data processing.
+
 #### ``-p``, ``--path`` : string, required
 The path to the CV data .bin file. You can use a path relative to the current working directory, an absolute path, or a path relative to the root directory (if one has been set).
-
-___
-
-#### ``-crd``, ``-–clear_root_dir`` : flag, optional
-Reset the root directory back to the default location (in the user's home directory).
 
 #### ``-fc``, ``--ferrocenium`` : float, optional
 Set the relative potential of the Fc/Fc<sup>+</sup> redox couple (given in V) to adjust the x-axis for data reporting.
 
-#### ``-fp``, ``--file_picker`` : flag, optional
-Interactively pick a .bin file from the terminal. The file is opened in view only mode.
+#### ``-sep``, ``--peak_sep_limit`` : float, optional
+The maximum distance (given in V) between two peaks for them to be considered "reversible". If the distance between two peaks if within the limit, E<sub>1/2</sub> calculations will be attempted.
+
+#### ``-t``, ``--trim`` : 2 integers, optional
+Use ``-t`` to select a specific portion of CV data. The first integer is the first sweep to select, and the second integer is the total number of sweeps to show. Give ``0`` for the second value to show all sweeps following the sweep specified by the first value.
+
+```
+# Show 2 sweeps starting from the 2nd sweep
+cvp -p C:\Desktop\MyData\myfile.bin -t 2 2
+
+# Show all sweeps after the 3rd sweep
+cvp -p C:\Desktop\MyData\myfile.bin -t 3 0
+```
+
+#### ``-v`` : flag, optional
+Enable view only mode. No data processing is performed and a plot of the data set is shown.
+
+### User Config Args
+Args related to user-configured settings.
+
+#### ``-crd``, ``-–clear_root_dir`` : flag, optional
+Reset the root directory back to the default location (in the user's home directory).
 
 #### ``-grd``, ``–-get_root_dir`` : flag, optional
 Print the current root directory to the console.
 
-#### ``-h``, ``--help`` : flag
-Use ``-h`` to get help with command line arguments.
-
-#### ``-rd``, ``-–root_dir`` : string, optional
+#### ``-srd``, ``-–set_root_dir`` : string, optional
 Specify a root directory to simplify file path entry. For instance, if you store all your CV data files in a common folder, you can designate it as the root directory. Subsequently, any path provided with ``-p`` is assumed to be relative to the root directory.
 
 **Without root directory:**
@@ -66,29 +94,24 @@ cvp -p mydata.bin
 
 By setting a root directory, you can omit the root directory part of the path. The root directory is saved between runs in a config file.
 
-#### ``-sep``, ``--peak_sep_limit`` : float, optional
-The maximum distance (given in V) between two peaks for them to be considered "reversible". If the distance between two peaks if within the limit, E<sub>1/2</sub> calculations will be attempted.
+### Other args
+Other miscellaneous args.
 
-#### ``-t``, ``--trim`` : 2 integers, optional
-Use ``-t`` to select a specific portion of CV data. The first integer is the first sweep to select, and the second integer is the total number of sweeps to show. Give ``0`` for the second value to show all sweeps following the sweep specified by the first value.
+#### ``-h``, ``--help`` : flag
+Use ``-h`` to get help with command line arguments.
 
-```
-# Show 2 sweeps starting from the 2nd sweep
-cvp -p C:\Desktop\MyData\myfile.bin -t 2 2
+#### ``-fp``, ``--file_picker`` : flag, optional
+Interactively pick a .bin file from the terminal. The file is opened in view only mode.
 
-# Show all sweeps after the 3rd sweep
-cvp -p C:\Desktop\MyData\myfile.bin -t 3 0
-```
-
-#### ``-tr``, ``--tree`` : flag, optional
+#### ``--tree`` : flag, optional
 Print the ``root_directory`` file tree to the console.
-
-#### ``-v`` : flag, optional
-Enable view only mode. No data processing is performed and a plot of the data set is shown.
 
 Examples
 --------
-Coming soon.
+Import the data from ``myfile.bin``, set the ferrocenium reference couple to +0.08 V, trim the data to keep two segments, starting from the second segment:
+```
+cvp -p C:\Desktop\MyData\myfile.bin -t 2 2 -fc 0.08
+```
 
 Multiview Mode
 --------------
