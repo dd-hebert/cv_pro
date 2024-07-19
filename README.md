@@ -13,11 +13,13 @@ Contents
 
 Installation
 ------------
-``cv_pro`` can be installed directly from this repo using pip:
+If you have git installed on your system, you can directly install ``cv_pro`` from this repo using pip:
 
 ```
 pip install git+https://github.com/dd-hebert/cv_pro.git
 ```
+
+Otherwise, clone this repo and use [setuptools](https://setuptools.pypa.io/en/latest/userguide/quickstart.html) to build the package (``python -m build``) then use pip to install the resulting ``.whl`` file.
 
 Command Line Interface
 ----------------------
