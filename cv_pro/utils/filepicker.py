@@ -18,42 +18,28 @@ class FilePicker:
 
     Attributes
     ----------
-    file_list : list
+    file_list : list[tuple, ...]
         A list of tuples containing a subfolder name ``file_list[x][0]`` and
         a list of files in each subfolder ``file_list[x][1]``.
-
     """
 
-    def __init__(self, root, file_ext):
+    def __init__(self, root: str, file_ext: str) -> None:
         """
         Initialize a FilePicker object.
 
         Parameters
         ----------
-        root : string
+        root : str
             A file path to a directory containing folders and files.
-        file_ext : string
+        file_ext : str
             The file extension of interest (e.g., '.jpeg').
-
-        Returns
-        -------
-        None.
-
         """
         self.root = os.path.abspath(root)
         self.ext = file_ext
         self.file_list = self._build_file_list()
 
-    def _build_file_list(self):
-        """
-        Build the list of files with the specified extension in the root directory.
-
-        Returns
-        -------
-        file_list : list
-            A list of files.
-
-        """
+    def _build_file_list(self) -> list:
+        """Build the list of files with the specified extension in the root directory."""
         print(f'Searching "{self.root}" for {self.ext} files...')
 
         file_list = [
@@ -71,7 +57,7 @@ class FilePicker:
 
         return file_list
 
-    def pick_file(self):
+    def pick_file(self) -> str:
         """
         Pick a file interactively from the terminal.
 
@@ -79,7 +65,6 @@ class FilePicker:
         -------
         file_path : string
             Returns the path of the chosen file relative to the root directory.
-
         """
         if self.file_list:
             while True:
@@ -109,7 +94,7 @@ class FilePicker:
             spacing = ' ' * (4 + extra_spacing)
             print(f'[{index + 1}]{spacing}{entry[0]}')
 
-    def _get_folder_choice(self):
+    def _get_folder_choice(self) -> tuple[int, str] | None:
         # Get user folder choice
         user_folder = input('\nSelect a folder: ')
         accepted_range = range(1, len(self.file_list) + 1)
@@ -127,7 +112,7 @@ class FilePicker:
 
             return folder_index, folder_name
 
-    def _print_files_in_folder(self, folder_index, folder_name):
+    def _print_files_in_folder(self, folder_index: int, folder_name: str) -> None:
         # Print list of files in user selected folder
         max_digits = len(str(len(self.file_list[folder_index][1])))
         spacing = ' ' * (6 + max_digits)
@@ -140,7 +125,7 @@ class FilePicker:
             else:
                 print(f'[{index + 1}]{spacing}└───{file}\t')
 
-    def _get_file_choice(self, folder_index, folder_name):
+    def _get_file_choice(self, folder_index: int, folder_name: str) -> str | None:
         # Get user file choice
         user_file = input('\nSelect a file: ')
         accepted_range = range(1, len(self.file_list[folder_index][1]) + 1)
@@ -160,7 +145,7 @@ class FilePicker:
 
             return file_name
 
-    def _print_selection(self, folder_name, file_name):
+    def _print_selection(self, folder_name: str, file_name: str) -> str:
         print('┏' + '┅' * (len(file_name) + 17) + '┓')
         print(f'┇ File selected: {file_name} ┇')
         print('┗' + '┅' * (len(file_name) + 17) + '┛')
@@ -173,15 +158,8 @@ class FilePicker:
 
         return file_path
 
-    def tree(self):
-        """
-        Print the ``root directory`` file tree to the console.
-
-        Returns
-        -------
-        None. Prints a file tree.
-
-        """
+    def tree(self) -> None:
+        """Print the root directory file tree to the console."""
         print(self.root)
         if self.file_list:
             for index, entry in enumerate(self.file_list):

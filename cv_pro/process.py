@@ -38,7 +38,7 @@ class Voltammogram:
         couple.
     """
 
-    def __init__(self, path, reference=0, peak_sep_limit=0.2, view_only=False):
+    def __init__(self, path, reference=0.0, peak_sep_limit=0.2, view_only=False):
         """
         Initialize a :class:`~cv_pro.process.Voltammogram` object.
 
@@ -146,7 +146,7 @@ class Voltammogram:
             A :class:`pandas.DataFrame` containing the corrected CV data.
         """
         corrected_voltammogram = [pd.DataFrame(
-            {'Potential (V)': segment['Potential (V)'] - self.reference,
+            {'Potential vs. Fc+/Fc0 (V)': segment['Potential (V)'] - self.reference,
              'Current (A)': segment['Current (A)']})
             for segment in self.voltammogram]
 

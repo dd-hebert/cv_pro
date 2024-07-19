@@ -43,13 +43,15 @@ def get_args():
         'and_filter': '``and`` filter mode.',
         'or_filter': '``or`` filter mode.'}
 
-    parser.add_argument('-f',
-                        '--search_filters',
-                        action='store',
-                        nargs='*',
-                        default='*',
-                        metavar='',
-                        help=help_msg['search_filters'])
+    parser.add_argument(
+        '-f',
+        '--search_filters',
+        action='store',
+        nargs='*',
+        default='*',
+        metavar='',
+        help=help_msg['search_filters']
+    )
 
     arg_group = parser.add_mutually_exclusive_group(required=False)
     arg_group.add_argument('-a', '--and_filter', dest='filter_mode', action='store_const',
