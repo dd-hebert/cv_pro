@@ -8,12 +8,13 @@ Created on Sat May 27 2023
 """
 
 import sys
-import cv_pro.scripts.cli
+
+from cv_pro.cli import CLI
 
 
 def main():
     """Run cv_pro from cli script entry point."""
-    cli = cv_pro.scripts.cli.CLI()
+    CLI()
     return 0
 
 
