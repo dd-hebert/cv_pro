@@ -152,3 +152,4 @@ cython_debug/
 #.idea/
 pkgupdate.bat
 bumpy.toml
+ruff.toml
