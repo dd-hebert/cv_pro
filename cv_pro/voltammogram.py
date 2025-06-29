@@ -7,10 +7,14 @@ Created on Thu May 25 2023
 @author: David Hebert
 """
 
-import os
-import scipy
+from pathlib import Path
+
 import pandas as pd
-from cv_pro.file_parse import parse_bin_file
+import scipy
+
+from cv_pro.io.export_csv import export_csv
+from cv_pro.io.parse_bin import parse_bin_file
+from cv_pro.utils._rich import ProcessingOutput
 
 
 class Voltammogram:
@@ -64,18 +68,31 @@ class Voltammogram:
         -------
         None.
         """
-        self.path = path
-        self.name = os.path.basename(self.path)
-        self.parameters, self.voltammogram = parse_bin_file(self.path)
+        self.path = Path(path)
+        self.name = Path(self.path).name
         self.reference = reference
         self.peak_sep_limit = peak_sep_limit
+        self.parameters, self.voltammogram = parse_bin_file(self.path)
+
+        self.peaks = None
+        self.E_halfs = None
+        self.peak_separations = None
+        self.corrected_voltammogram = None
+        self.is_processed = False
 
         if not view_only:
-            self.peaks = self.find_peaks()
-            self.E_halfs, self.peak_separations = self.find_Ehalfs()
-            self._print_E_halfs(self.E_halfs, self.peak_separations)
-            if self.reference != 0:
-                self.corrected_voltammogram = self._relative_to_ferrocenium()
+            self.process_data()
+
+    def __rich__(self):
+        return ProcessingOutput(self)
+
+    def process_data(self) -> None:
+        self.peaks = self.find_peaks()
+        self.E_halfs, self.peak_separations = self.find_Ehalfs()
+        self._print_E_halfs(self.E_halfs, self.peak_separations)
+        if self.reference != 0:
+            self.corrected_voltammogram = self._relative_to_ferrocenium()
+        self.is_processed = True
 
     def find_peaks(self):
         """
@@ -88,8 +105,8 @@ class Voltammogram:
         """
         peaks = []
 
-        for segment in self.voltammogram:
-            peaks.append(scipy.signal.find_peaks(abs(segment['Current (A)']), width=20))
+        for _, segment in self.voltammogram.items():
+            peaks.append(scipy.signal.find_peaks(abs(segment), width=20))
 
         return peaks
 
@@ -106,20 +123,26 @@ class Voltammogram:
         E_halfs = []
         peak_separations = []
 
-        for i, (segment, next_segment) in enumerate(zip(self.voltammogram, self.voltammogram[1:])):
+        for i in range(len(self.voltammogram.columns) - 1):
+            segment = self.voltammogram.iloc[:, i]
+            next_segment = self.voltammogram.iloc[:, i + 1]
             e_halfs = []
             peak_sep = []
 
             for peak_a in self.peaks[i][0]:
-                peak_a_x = segment['Potential (V)'][peak_a] - self.reference
-                peak_a_y = segment['Current (A)'][peak_a]
+                peak_a_x = segment.index[peak_a] - self.reference
+                peak_a_y = segment.iloc[peak_a]
                 for peak_b in self.peaks[i + 1][0]:
-                    peak_b_x = next_segment['Potential (V)'][peak_b] - self.reference
-                    peak_b_y = next_segment['Current (A)'][peak_b]
+                    peak_b_x = next_segment.index[peak_b] - self.reference
+                    peak_b_y = next_segment.iloc[peak_b]
                     if abs(peak_a_x - peak_b_x) <= self.peak_sep_limit:
                         # Check that peaks are in the correct order
-                        if (peak_a_y > peak_b_y and peak_a_x < peak_b_x) or (peak_a_y < peak_b_y and peak_a_x > peak_b_x):
-                            e_halfs.append(round(0.5 * (peak_a_x - peak_b_x) + peak_b_x, 2))
+                        if (peak_a_y > peak_b_y and peak_a_x < peak_b_x) or (
+                            peak_a_y < peak_b_y and peak_a_x > peak_b_x
+                        ):
+                            e_halfs.append(
+                                round(0.5 * (peak_a_x - peak_b_x) + peak_b_x, 2)
+                            )
                             peak_sep.append(abs(peak_a_x - peak_b_x))
 
             E_halfs.append(e_halfs)
@@ -145,9 +168,9 @@ class Voltammogram:
         :class:`pandas.DataFrame`
             A :class:`pandas.DataFrame` containing the corrected CV data.
         """
-        corrected_voltammogram = [pd.DataFrame(
-            {'Potential vs. Fc+/Fc0 (V)': segment['Potential (V)'] - self.reference,
-             'Current (A)': segment['Current (A)']})
-            for segment in self.voltammogram]
-
+        corrected_voltammogram = self.voltammogram
+        corrected_voltammogram.index = corrected_voltammogram.index - self.reference
         return corrected_voltammogram
+
+    def export_csv(self, data: pd.DataFrame, suffix: str | None = None) -> None:
+        return export_csv(data, self.path.parent, Path(self.name).stem, suffix=suffix)

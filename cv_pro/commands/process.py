@@ -1,0 +1,183 @@
+"""
+Functions for the ``process`` command.
+
+@author: David Hebert
+"""
+
+import argparse
+
+from rich import print
+
+from cv_pro.commands import Argument, command
+from cv_pro.plots import CV_Plot
+from cv_pro.utils.paths import cleanup_path, handle_args_path
+from cv_pro.utils.prompts import checkbox
+from cv_pro.voltammogram import Voltammogram
+
+HELP = {
+    'path': 'Process .bin CV data file at the given path.',
+    'view': """Enable view only mode (no data processing).""",
+    'no-export': 'Skip the "export data" prompt at the end of the script.',
+    'ferrocenium': 'Set the relative potential of the Fc/Fc+ couple.',
+    'peak-sep-limit': 'Set the peak separation limit in V when finding E1/2s.',
+    'trim': """2 integers: Trim data from segment START and show SEGMENTS total segments.
+                The first value is the first segment to plot and the second
+                value is the value is the total number of segments to plot.""",
+    'pub-quality': 'Generate a publication-quality plot.',
+}
+ARGS = [
+    Argument(
+        'path',
+        action='store',
+        type=cleanup_path,
+        nargs='?',
+        default=None,
+        help=HELP['path'],
+    ),
+    Argument(
+        '-v',
+        '--view',
+        action='store_true',
+        default=False,
+        help=HELP['view'],
+    ),
+    Argument(
+        '-ne',
+        '--no-export',
+        action='store_true',
+        default=False,
+        help=HELP['no-export'],
+    ),
+    Argument(
+        '-fc',
+        '--ferrocenium',
+        action='store',
+        type=float,
+        default=0,
+        metavar='',
+        help=HELP['ferrocenium'],
+    ),
+    Argument(
+        '-sep',
+        '--peak-sep-limit',
+        action='store',
+        type=float,
+        default=0.2,
+        metavar='',
+        help=HELP['peak-sep-limit'],
+    ),
+    Argument(
+        '-tr',
+        '--trim',
+        action='store',
+        type=int,
+        nargs=2,
+        default=(1, 0),
+        metavar=('START', 'SEGMENTS'),
+        help=HELP['trim'],
+    ),
+    Argument(
+        '-pub',
+        '--pub-quality',
+        action='store_true',
+        default=False,
+        help=HELP['pub-quality'],
+    ),
+]
+
+
+@command(args=ARGS, aliases=['p', 'proc'])
+def process(args: argparse.Namespace) -> None:
+    """
+    Process data.
+
+    Initializes a :class:`~cv_pro.voltammogram.Voltammogram` with the
+    given ``args``, plots the result, and prompts the user
+    for exporting.
+
+    Parser Info
+    -----------
+    *aliases : p, proc
+    *desc : Process a .bin CV data file with the given args, \
+        plot the result, and export data (optional).
+    *help : Process .bin CV data files.
+    """
+    handle_args_path(args)
+
+    if args.view is True:
+        voltammogram = Voltammogram(args.path, view_only=True)
+
+    else:
+        voltammogram = Voltammogram(
+            args.path, reference=args.ferrocenium, peak_sep_limit=args.peak_sep_limit
+        )
+
+    print('', voltammogram, sep='\n')
+    _plot_and_export(args, voltammogram)
+
+
+def prompt_for_export(
+    voltammogram, data_start: int = 1, num_segments: int = 0
+) -> list[str]:
+    """
+    Prompt the user for data export.
+
+    Parameters
+    ----------
+    voltammogram : :class:`~cv_pro.voltammogram.Voltammogram`
+        The :class:`~cv_pro.voltammogram.Voltammogram` to be exported.
+
+    Returns
+    -------
+    list[str]
+        The names of the exported files.
+    """
+    options = ['Voltammogram (raw)']
+    if num_segments != 0:
+        segments = voltammogram.voltammogram.columns[
+            data_start - 1 : data_start + num_segments
+        ]
+    else:
+        segments = voltammogram.voltammogram.columns[data_start - 1]
+
+    export_map = {'Voltammogram (raw)': [(voltammogram.voltammogram[segments], None)]}
+
+    if voltammogram.corrected_voltammogram is not None:
+        key = 'Voltammogram (corrected)'
+        options.append(key)
+        export_map[key] = [(voltammogram.corrected_voltammogram[segments], 'corrected')]
+
+    user_selection = checkbox('Choose data to export', options)
+
+    if user_selection is None:
+        return []
+
+    return [
+        voltammogram.export_csv(*file)
+        for opt in user_selection
+        for file in export_map[opt]
+    ]
+
+
+def _plot_and_export(args: argparse.Namespace, voltammogram: Voltammogram) -> None:
+    """Plot a :class:`~cv_pro.voltammogram.Voltammogram` and prompt the user for export."""
+    print('\nPlotting data...')
+    print('Close plot window to continue...')
+    if args.view is True:
+        CV_Plot(voltammogram, view_only=True)
+
+    else:
+        files_exported = []
+
+        CV_Plot(voltammogram, *args.trim, pub_quality=args.pub_quality)
+
+        if args.no_export is False:
+            files_exported.extend(prompt_for_export(voltammogram, *args.trim))
+
+        if files_exported:
+            print(f'\nExport location: [repr.path]{args.path.parent}[/repr.path]')
+            print('Files exported:')
+            [
+                print(f'\t[repr.filename]{file}[/repr.filename]')
+                for file in files_exported
+            ]
