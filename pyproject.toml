@@ -11,7 +11,7 @@ authors = [
 description = "Tools for processing CH Instruments ch760e electrochemical analyzer data files."
 readme = "README.md"
 license = {file = "LICENSE"}
-requires-python = ">=3.7"
+requires-python = ">=3.8"
 classifiers = [
   "Development Status :: 4 - Beta",
   "Environment :: Console",
@@ -45,12 +45,14 @@ keywords = [
 dependencies = [
   "numpy>=1.21.6",
   "pandas>=1.5.2",
-  "matplotlib>=3.6.2"
+  "matplotlib>=3.6.2",
+  "scipy>=1.12.0",
+  "rich>=13.7.1",
+  "questionary>=2.0.1",
 ]
 
 [project.scripts]
-cvp = "cv_pro.scripts.cli:main"
-cvpmv = "cv_pro.scripts.multiview:main"
+cvp = "cv_pro.cli:main"
 
 [project.urls]
 "repository" = "https://github.com/dd-hebert/cv_pro"
