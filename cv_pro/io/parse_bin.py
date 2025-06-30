@@ -8,47 +8,58 @@ Created on Fri May 26 2023
 """
 
 import struct
+from dataclasses import dataclass
 
 import pandas as pd
 
 
-def parse_bin_file(path):
+@dataclass
+class Parameters:
+    init_E: float
+    final_E: float
+    high_E: float
+    low_E: float
+    scan_rate: float
+    init_sweep_direction: tuple[int, str]
+    num_segments: int
+    sample_interval: float
+    sensitivity: float
+    quiet_time: float
+
+
+def parse_bin_file(path) -> tuple[pd.DataFrame, Parameters]:
     """
     Parse CV data .bin file.
 
     Parameters
     ----------
-    path : str
+    path : str or Path
         A file path to a .bin file containing CV data.
 
     Returns
     -------
-    parameters : dict
-        A dictionary containing the experimental parameters.
     voltammogram : list
-        A list of :class:`pandas.DataFrame` objects containing the CV data.
+        A :class:`pandas.DataFrame` containing the CV data.
+    parameters : Parameters
+        A :class:`~cv_pro.io.parse_bin.Parameters` object containing the experimental parameters.
 
     """
-    print('Reading bin file...')
-    file_bytes = _open_bin_file(path)
-    parameters = _get_experimental_parameters(file_bytes)
-    _print_experimental_parameters(parameters)
-    current = _unpack_data(file_bytes, parameters)
+    file_bytes = _read_bin(path)
+    parameters = _get_parameters(file_bytes)
+    current = _unpack_data(file_bytes)
     potential, segment_indices = _build_segments(file_bytes, parameters)
     voltammogram = _build_voltammogram(potential, current, segment_indices)
-    print('Success.')
 
-    return parameters, voltammogram
+    return voltammogram, parameters
 
 
-def _open_bin_file(path):
+def _read_bin(path):
     with open(path, 'rb') as bin_file:
         file_bytes = bin_file.read()
-
     return file_bytes
 
 
-def _get_experimental_parameters(file_bytes):
+def _get_parameters(file_bytes):
     parameters = {}
     # Little endian float mode
     parameters['init_E'] = round(struct.unpack('<f', (file_bytes[845:849]))[0], 3)  # V
@@ -59,9 +70,7 @@ def _get_experimental_parameters(file_bytes):
         struct.unpack('<f', (file_bytes[861:865]))[0], 5
     )  # V/s
     # unknown_var1 = struct.unpack('<f', (file_bytes[865: 869]))[0]  # unknown
-    parameters['init_scan_polarity'] = int(
-        struct.unpack('<f', (file_bytes[869:873]))[0]
-    )  # 1 or 0
+    init_scan_polarity = int(struct.unpack('<f', (file_bytes[869:873]))[0])  # 1 or 0
     parameters['num_segments'] = int(
         struct.unpack('<f', (file_bytes[873:877]))[0]
     )  # no units
@@ -72,53 +81,46 @@ def _get_experimental_parameters(file_bytes):
     parameters['sensitivity'] = struct.unpack('<f', (file_bytes[885:889]))[0]  # A/V
     parameters['quiet_time'] = struct.unpack('<f', (file_bytes[889:893]))[0]  # sec
 
-    if parameters['init_scan_polarity'] == 1:
+    if init_scan_polarity == 1:
         parameters['init_sweep_direction'] = (1, 'Positive')
-    elif parameters['init_scan_polarity'] == 0:
+    elif init_scan_polarity == 0:
         parameters['init_sweep_direction'] = (-1, 'Negative')
 
-    return parameters
+    return Parameters(**parameters)
 
 
-def _print_experimental_parameters(parameters):
-    print(f'Init E (V): {parameters["init_E"]}')
-    print(f'Final E (V): {parameters["final_E"]}')
-    print(f'High E (V): {parameters["high_E"]}')
-    print(f'Low E (V): {parameters["low_E"]}')
-    print(f'Scan Rate (V/s): {parameters["scan_rate"]}')
-    print(f'Initial Scan Polarity: {parameters["init_sweep_direction"][1]}')
-
-
-def _unpack_data(file_bytes, parameters):
+def _unpack_data(file_bytes: bytes) -> list[float]:
     data_start = 1445  # CV data begins at this byte
     cv_data = file_bytes[data_start:]
-
     current = [value for (value,) in struct.iter_unpack('<f', cv_data)]
-
     return current
 
 
-def _build_segments(file_bytes, parameters):
+def _build_segments(
+    file_bytes: bytes, parameters: Parameters
+) -> tuple[list[float], list[int]]:
     data_start = 1445  # CV data begins at this byte
-    segment_indices = [0]
-    sweep_direction = parameters['init_sweep_direction'][0]
-    v = parameters['init_E']
-    potential = []
+    sweep_direction = parameters.init_sweep_direction[0]
+    v = parameters.init_E
     tol = 1e-4
+    segment_indices = [0]
+    potential = []
 
     for i in range(data_start, len(file_bytes), 4):
         potential.append(round(v, 3))
-        v += round(parameters['sample_interval'] * sweep_direction, 3)
+        v += round(parameters.sample_interval * sweep_direction, 3)
 
         # Change sweep direction when v = the high or low limit
-        if abs(v - parameters['high_E']) < tol or abs(v - parameters['low_E']) < tol:
+        if abs(v - parameters.high_E) < tol or abs(v - parameters.low_E) < tol:
             sweep_direction *= -1
             segment_indices.append(len(potential))
 
     return potential, segment_indices
 
 
-def _build_voltammogram(potential, current, segment_indices) -> pd.DataFrame:
+def _build_voltammogram(
+    potential: list[float], current: list[float], segment_indices: list[int]
+) -> pd.DataFrame:
     if segment_indices[-1] != len(potential):
         segment_indices.append(len(potential))
 
