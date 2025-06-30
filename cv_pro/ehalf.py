@@ -3,7 +3,7 @@ import pandas as pd
 
 
 def find_ehalfs(
-    cv_traces: pd.DataFrame, peaks: list, peak_sep_limit: float = 0.2
+    cv_traces: pd.DataFrame, peaks: dict, peak_sep_limit: float = 0.2
 ) -> tuple[list[list[float]], list[list[float]]]:
     """
     Find E1/2 values for peak pairs between consecutive segments that are within peak_sep_limit.
@@ -43,7 +43,7 @@ def find_ehalfs(
 
 
 def _process_segment_pair(
-    cv_traces: pd.DataFrame, segment_idx: int, peaks: list, peak_sep_limit: float = 0.2
+    cv_traces: pd.DataFrame, segment_idx: int, peaks: dict, peak_sep_limit: float = 0.2
 ) -> tuple[list[float], list[float]]:
     """
     Process a pair of consecutive segments to find E1/2 values.
@@ -63,8 +63,8 @@ def _process_segment_pair(
     current_segment = cv_traces.iloc[:, segment_idx]
     next_segment = cv_traces.iloc[:, segment_idx + 1]
 
-    current_peaks = peaks[segment_idx][0]
-    next_peaks = peaks[segment_idx + 1][0]
+    current_peaks = peaks[current_segment.name]
+    next_peaks = peaks[next_segment.name]
 
     if len(current_peaks) == 0 or len(next_peaks) == 0:
         return [], []

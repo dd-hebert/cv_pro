@@ -98,12 +98,11 @@ class Voltammogram:
         return ProcessingOutput(self)
 
     def process_data(self) -> None:
+        self.processed_data = self.raw_data.copy()
+
         if self.trim is not None:
             self._check_trim_values()
-            self.processed_data = self.trim_data()
-
-        else:
-            self.processed_data = self.raw_data
+            self.processed_data = self.trim_data(self.processed_data)
 
         if self.reference != 0:
             self.processed_data = self._apply_correction(self.processed_data)
@@ -115,10 +114,10 @@ class Voltammogram:
 
         self.is_processed = True
 
-    def trim_data(self) -> pd.DataFrame:
+    def trim_data(self, cv_traces: pd.DataFrame) -> pd.DataFrame:
         before = f'Segment_{self.trim[0]}'
         after = f'Segment_{self.trim[1]}'
-        return self.raw_data.truncate(before, after, axis='columns', copy=True)
+        return cv_traces.truncate(before, after, axis='columns', copy=True)
 
     def find_peaks(self, cv_traces: pd.DataFrame) -> list:
         """
@@ -136,7 +135,10 @@ class Voltammogram:
         """
         from scipy.signal import find_peaks
 
-        peaks = [find_peaks(abs(segment), width=20) for _, segment in cv_traces.items()]
+        peaks = {
+            name: find_peaks(abs(segment), width=20)[0]
+            for name, segment in cv_traces.items()
+        }
         return peaks
 
     def _apply_correction(self, data: pd.DataFrame) -> pd.DataFrame:
@@ -158,14 +160,13 @@ class Voltammogram:
         return corrected_data
 
     def _check_trim_values(self) -> None:
-        if self.trim is not None:
-            start, end = self.trim
-            start = max(start, 1)
+        start, end = self.trim
+        start = max(start, 1)
 
-            if end >= len(self.raw_data.columns) or end == -1:
-                end = len(self.raw_data.columns)
+        if end >= len(self.raw_data.columns) or end == -1:
+            end = len(self.raw_data.columns)
 
-            self.trim = (start, end)
+        self.trim = (start, end)
 
     def export_csv(self, data: pd.DataFrame, suffix: str | None = None) -> None:
         return export_csv(data, self.path.parent, Path(self.name).stem, suffix=suffix)

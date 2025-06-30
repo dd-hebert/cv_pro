@@ -147,18 +147,16 @@ class CV_Plot:
             ax.plot(seg.index, seg)
 
     def _plot_peaks(self, ax):
-        for i, line in zip(range(len(self.peaks)), ax.get_lines()):
-            peak_index = self.peaks[i][0]
-            potentials = self.cv_traces.index[peak_index]  # - self.reference
-            column = self.cv_traces.columns[i]
-            currents = self.cv_traces[column].iloc[peak_index]
+        for (segment, peaks), line in zip(self.peaks.items(), ax.get_lines()):
+            potentials = self.cv_traces.index[peaks]
+            currents = self.cv_traces[segment].iloc[peaks]
             color = line.get_color()
             ax.scatter(potentials, currents, color=color)
 
             if len(self.cv_traces.columns) == 1:
-                for peak in peak_index:
-                    potential = self.cv_traces.index[peak]  # - self.reference
-                    current = self.cv_traces[column].iloc[peak]
+                for peak in peaks:
+                    potential = self.cv_traces.index[peak]
+                    current = self.cv_traces[segment].iloc[peak]
                     label = f'{round(potential, 3)}'
                     point = (potential, current)
                     ax.annotate(label, point, xytext=(5, 5), textcoords='offset points')
