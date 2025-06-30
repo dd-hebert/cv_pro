@@ -133,7 +133,9 @@ class ProcessingOutput:
                 [
                     '',
                     self.ehalfs_panel(
-                        voltammogram.E_halfs, voltammogram.peak_separations
+                        voltammogram.E_halfs,
+                        voltammogram.peak_separations,
+                        voltammogram.trim,
                     ),
                 ]
             )
@@ -151,7 +153,7 @@ class ProcessingOutput:
         subtitle = [
             Text.assemble(
                 'Total segments: ',
-                (f'{len(voltammogram.voltammogram.columns)}', STYLES['bold']),
+                (f'{len(voltammogram.raw_data.columns)}', STYLES['bold']),
             ),
         ]
 
@@ -179,20 +181,18 @@ class ProcessingOutput:
             table = Table('', '', show_header=False, box=box.SIMPLE)
 
             table.add_row(
-                'E init. (V)', bold_text(f'{voltammogram.parameters["init_E"]: }')
+                'E init. (V)', bold_text(f'{voltammogram.parameters.init_E: }')
             )
             table.add_row(
-                'E final (V)', bold_text(f'{voltammogram.parameters["final_E"]: }')
+                'E final (V)', bold_text(f'{voltammogram.parameters.final_E: }')
             )
             table.add_row(
-                'E high (V)', bold_text(f'{voltammogram.parameters["high_E"]: }')
+                'E high (V)', bold_text(f'{voltammogram.parameters.high_E: }')
             )
-            table.add_row(
-                'E low (V)', bold_text(f'{voltammogram.parameters["low_E"]: }')
-            )
+            table.add_row('E low (V)', bold_text(f'{voltammogram.parameters.low_E: }'))
             table.add_row(
                 'Scan rate (V/s)',
-                bold_text(f'{voltammogram.parameters["scan_rate"]: }'),
+                bold_text(f'{voltammogram.parameters.scan_rate: }'),
             )
 
             return table
@@ -203,18 +203,18 @@ class ProcessingOutput:
 
             table.add_row(
                 'Init. sweep direction',
-                bold_text(f'{voltammogram.parameters["init_sweep_direction"][1]}'),
+                bold_text(f'{voltammogram.parameters.init_sweep_direction[1]}'),
             )
             table.add_row(
                 'Sample interval (V)',
-                bold_text(f'{voltammogram.parameters["sample_interval"]}'),
+                bold_text(f'{voltammogram.parameters.sample_interval}'),
             )
             table.add_row(
                 'Sensitivity (A/V)',
-                bold_text(f'{voltammogram.parameters["sensitivity"]:.2e}'),
+                bold_text(f'{voltammogram.parameters.sensitivity:.2e}'),
             )
             table.add_row(
-                'Quiet time (s)', bold_text(f'{voltammogram.parameters["quiet_time"]}')
+                'Quiet time (s)', bold_text(f'{voltammogram.parameters.quiet_time}')
             )
 
             return table
@@ -225,16 +225,21 @@ class ProcessingOutput:
             subtitle=Text('\t').join(subtitle),
         )
 
-    def ehalfs_panel(self, E_halfs, peak_separations) -> Panel:
+    def ehalfs_panel(self, E_halfs, peak_separations, trim) -> Panel:
         tables = []
         for i, (e_half, peak_sep) in enumerate(zip(E_halfs, peak_separations)):
             if i < len(E_halfs):
+                if trim is not None:
+                    j = i + trim[0]
                 e_half.sort(reverse=True)
-                table = Table(f'Segment {i + 1} → {i + 2}', box=box.SIMPLE_HEAD)
+                table = Table(f'Segment {j} → {j + 1}', box=box.SIMPLE_HEAD)
 
                 for e, sep in zip(e_half, peak_sep):
                     table.add_row('{: .3f} ({:.3f})'.format(e, sep))
 
             tables.append(table)
 
-        return fancy_panel(Columns(tables, align='center'), title='E1/2')
+        # return Columns(tables, align='center', title='E1/2')
+        return fancy_panel(
+            Columns(tables, align='center'), title='E1/2 and Peak Separations'
+        )
