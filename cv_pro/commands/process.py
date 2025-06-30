@@ -16,13 +16,11 @@ from cv_pro.voltammogram import Voltammogram
 
 HELP = {
     'path': 'Process .bin CV data file at the given path.',
-    'view': """Enable view only mode (no data processing).""",
+    'view': 'Enable view only mode (no data processing).',
     'no-export': 'Skip the "export data" prompt at the end of the script.',
     'ferrocenium': 'Set the relative potential of the Fc/Fc+ couple.',
     'peak-sep-limit': 'Set the peak separation limit in V when finding E1/2s.',
-    'trim': """2 integers: Trim data from segment START and show SEGMENTS total segments.
-                The first value is the first segment to plot and the second
-                value is the value is the total number of segments to plot.""",
+    'trim': '2 integers: Trim the data, keeping segment START through segment END.',
     'pub-quality': 'Generate a publication-quality plot.',
 }
 ARGS = [
@@ -72,8 +70,8 @@ ARGS = [
         action='store',
         type=int,
         nargs=2,
-        default=(1, 0),
-        metavar=('START', 'SEGMENTS'),
+        default=None,
+        metavar=('START', 'END'),
         help=HELP['trim'],
     ),
     Argument(
@@ -109,16 +107,17 @@ def process(args: argparse.Namespace) -> None:
 
     else:
         voltammogram = Voltammogram(
-            args.path, reference=args.ferrocenium, peak_sep_limit=args.peak_sep_limit
+            args.path,
+            args.trim,
+            reference=args.ferrocenium,
+            peak_sep_limit=args.peak_sep_limit,
         )
 
     print('', voltammogram, sep='\n')
     _plot_and_export(args, voltammogram)
 
 
-def prompt_for_export(
-    voltammogram, data_start: int = 1, num_segments: int = 0
-) -> list[str]:
+def prompt_for_export(voltammogram) -> list[str]:
     """
     Prompt the user for data export.
 
@@ -133,19 +132,12 @@ def prompt_for_export(
         The names of the exported files.
     """
     options = ['Voltammogram (raw)']
-    if num_segments != 0:
-        segments = voltammogram.voltammogram.columns[
-            data_start - 1 : data_start + num_segments
-        ]
-    else:
-        segments = voltammogram.voltammogram.columns[data_start - 1]
+    export_map = {'Voltammogram (raw)': [(voltammogram.raw_data, None)]}
 
-    export_map = {'Voltammogram (raw)': [(voltammogram.voltammogram[segments], None)]}
-
-    if voltammogram.corrected_voltammogram is not None:
+    if voltammogram.is_processed:
         key = 'Voltammogram (corrected)'
         options.append(key)
-        export_map[key] = [(voltammogram.corrected_voltammogram[segments], 'corrected')]
+        export_map[key] = [(voltammogram.processed_data, 'corrected')]
 
     user_selection = checkbox('Choose data to export', options)
 
@@ -164,15 +156,15 @@ def _plot_and_export(args: argparse.Namespace, voltammogram: Voltammogram) -> No
     print('\nPlotting data...')
     print('Close plot window to continue...')
     if args.view is True:
-        CV_Plot(voltammogram, view_only=True)
+        CV_Plot(voltammogram, voltammogram.raw_data, view_only=True)
 
     else:
         files_exported = []
 
-        CV_Plot(voltammogram, *args.trim, pub_quality=args.pub_quality)
+        CV_Plot(voltammogram, voltammogram.processed_data, pub_quality=args.pub_quality)
 
         if args.no_export is False:
-            files_exported.extend(prompt_for_export(voltammogram, *args.trim))
+            files_exported.extend(prompt_for_export(voltammogram))
 
         if files_exported:
             print(f'\nExport location: [repr.path]{args.path.parent}[/repr.path]')
