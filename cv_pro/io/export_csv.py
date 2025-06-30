@@ -25,7 +25,7 @@ def export_csv(
     ----------
     data : :class:`pandas.DataFrame`
         The data to be exported. A :class:`pandas.DataFrame`
-        such as :attr:`~cv_pro.voltammogram.Voltammogram.voltammogram`
+        such as :attr:`~cv_pro.voltammogram.Voltammogram.raw_data`
     suffix : str or None
         A suffix to append to the end of the file name \
         (before the file extension).
