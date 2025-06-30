@@ -9,8 +9,6 @@ Created on Fri May 26 2023
 
 import matplotlib.pyplot as plt
 
-from cv_pro.utils.helpers import check_start_and_segments
-
 
 class CV_Plot:
     """
@@ -18,13 +16,13 @@ class CV_Plot:
 
     Attributes
     ----------
-    voltammogram : :class:`~cv_pro.process.Voltammogram`
+    voltammogram : :class:`~cv_pro.voltammogram.Voltammogram`
         The Voltammogram to plot.
     reference : float
         The reference potential value.
     name : str
         The name of the voltammogram.
-    data : dict
+    data : :class:`pandas.DataFrame`
         The voltammogram data.
     peaks : list
         List of peak indices for each segment.
@@ -37,8 +35,7 @@ class CV_Plot:
     def __init__(
         self,
         voltammogram,
-        plot_start=1,
-        plot_segments=0,
+        cv_traces,
         view_only=False,
         pub_quality=False,
     ):
@@ -59,19 +56,15 @@ class CV_Plot:
         pub_quality : bool, optional
             Generate a publicatoin-quality plot. The default is False.
         """
-        self.voltammogram = voltammogram
+        self.cv_traces = cv_traces
         self.reference = voltammogram.reference
         self.name = voltammogram.name
-        self.data = voltammogram.voltammogram
+        # self.raw_data = voltammogram.raw_data
+        # self.processed_data = voltammogram.processed_data
 
         if view_only:
-            self.plot_start = 1
-            self.plot_segments = len(self.data.columns)
             self.plot_CV(view_only=view_only)
         else:
-            self.plot_start, self.plot_segments = check_start_and_segments(
-                self.data, plot_start, plot_segments
-            )
             self.peaks = voltammogram.peaks
             self.E_halfs = voltammogram.E_halfs
             self.peak_separations = voltammogram.peak_separations
@@ -149,39 +142,42 @@ class CV_Plot:
         return fig, ax
 
     def _plot_cv_curves(self, ax):
-        for i in range(self.plot_start, self.plot_start + self.plot_segments):
-            seg = self.data[f'Segment_{i}'].dropna()
-            ax.plot(seg.index - self.reference, seg)
+        for _, segment in self.cv_traces.items():
+            seg = segment.dropna()
+            ax.plot(seg.index, seg)
 
     def _plot_peaks(self, ax):
-        for i, line in zip(
-            range(self.plot_start, self.plot_start + self.plot_segments), ax.get_lines()
-        ):
-            peak_index = self.peaks[i - 1][0]
-            potentials = self.data.index[peak_index] - self.reference
-            currents = self.data[f'Segment_{i}'].iloc[peak_index]
+        for i, line in zip(range(len(self.peaks)), ax.get_lines()):
+            peak_index = self.peaks[i][0]
+            potentials = self.cv_traces.index[peak_index]  # - self.reference
+            column = self.cv_traces.columns[i]
+            currents = self.cv_traces[column].iloc[peak_index]
             color = line.get_color()
             ax.scatter(potentials, currents, color=color)
 
-            if self.plot_segments == 1:
+            if len(self.cv_traces.columns) == 1:
                 for peak in peak_index:
-                    potential = self.data.index[peak] - self.reference
-                    current = self.data[f'Segment_{i}'].iloc[peak]
+                    potential = self.cv_traces.index[peak]  # - self.reference
+                    current = self.cv_traces[column].iloc[peak]
                     label = f'{round(potential, 3)}'
                     point = (potential, current)
                     ax.annotate(label, point, xytext=(5, 5), textcoords='offset points')
 
     def _plot_e_half_labels(self, ax):
-        for i in range(self.plot_start, self.plot_start + self.plot_segments - 2):
+        for i in range(len(self.E_halfs)):
             for e_half in self.E_halfs[i]:
-                seg = self.data[f'Segment_{i}']
-                next_seg = self.data[f'Segment_{i + 1}']
-                raw_e_half = round(e_half + self.reference, 3)
+                column = self.cv_traces.columns[i]
+                seg = self.cv_traces[column]
+
+                next_column = self.cv_traces.columns[i + 1]
+                next_seg = self.cv_traces[next_column]
+
+                raw_e_half = round(e_half, 3)
 
                 try:
                     y1 = seg.loc[raw_e_half]
                     y2 = next_seg.loc[raw_e_half]
-                except IndexError:
+                except KeyError:
                     pass
                 else:
                     vertical_mid_point = 0.5 * (y1 - y2) + y2
