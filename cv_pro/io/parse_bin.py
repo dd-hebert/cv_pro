@@ -12,6 +12,8 @@ from dataclasses import dataclass
 
 import pandas as pd
 
+from cv_pro.segment import Segment
+
 
 @dataclass
 class Parameters:
@@ -27,7 +29,7 @@ class Parameters:
     quiet_time: float
 
 
-def parse_bin_file(path) -> tuple[pd.DataFrame, Parameters]:
+def parse_bin_file(path) -> tuple[list[Segment], Parameters]:
     """
     Parse CV data .bin file.
 
@@ -47,10 +49,9 @@ def parse_bin_file(path) -> tuple[pd.DataFrame, Parameters]:
     file_bytes = _read_bin(path)
     parameters = _get_parameters(file_bytes)
     current = _unpack_data(file_bytes)
-    potential, segment_indices = _build_segments(file_bytes, parameters)
-    voltammogram = _build_voltammogram(potential, current, segment_indices)
+    segments = _get_segments(file_bytes, parameters, current)
 
-    return voltammogram, parameters
+    return segments, parameters
 
 
 def _read_bin(path):
@@ -96,7 +97,7 @@ def _unpack_data(file_bytes: bytes) -> list[float]:
     return current
 
 
-def _build_segments(
+def _get_potentials_and_indices(
     file_bytes: bytes, parameters: Parameters
 ) -> tuple[list[float], list[int]]:
     data_start = 1445  # CV data begins at this byte
@@ -118,9 +119,11 @@ def _build_segments(
     return potential, segment_indices
 
 
-def _build_voltammogram(
-    potential: list[float], current: list[float], segment_indices: list[int]
-) -> pd.DataFrame:
+def _get_segments(
+    file_bytes: bytes, parameters: Parameters, current: list[float]
+) -> list[Segment]:
+    potential, segment_indices = _get_potentials_and_indices(file_bytes, parameters)
+
     if segment_indices[-1] != len(potential):
         segment_indices.append(len(potential))
 
@@ -133,10 +136,12 @@ def _build_voltammogram(
         pot = potential[start:end]
         cur = current[start:end]
 
-        df = pd.DataFrame({f'Segment_{i + 1}': cur}, index=pot)
-        segments.append(df)
+        ser = pd.Series(cur, index=pot)
+        ser.rename('Current (A)')
+        ser.index.rename('Potential (V)', inplace=True)
+        ser.sort_index(inplace=True)
+        segment = Segment(i, ser)
+        segments.append(segment)
 
-    voltammogram = pd.concat(segments, axis=1)
-    voltammogram.sort_index(inplace=True)
-
-    return voltammogram
+    print([segment.index for segment in segments])
+    return segments

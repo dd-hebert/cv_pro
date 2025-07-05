@@ -117,7 +117,7 @@ def process(args: argparse.Namespace) -> None:
     _plot_and_export(args, voltammogram)
 
 
-def prompt_for_export(voltammogram) -> list[str]:
+def prompt_for_export(voltammogram: Voltammogram) -> list[str]:
     """
     Prompt the user for data export.
 
@@ -132,12 +132,12 @@ def prompt_for_export(voltammogram) -> list[str]:
         The names of the exported files.
     """
     options = ['Voltammogram (raw)']
-    export_map = {'Voltammogram (raw)': [(voltammogram.raw_data, None)]}
+    export_map = {'Voltammogram (raw)': [(voltammogram.segments, 'raw', None)]}
 
     if voltammogram.is_processed:
         key = 'Voltammogram (corrected)'
         options.append(key)
-        export_map[key] = [(voltammogram.processed_data, 'corrected')]
+        export_map[key] = [(voltammogram.trimmed_segments, 'processed', 'corrected')]
 
     user_selection = checkbox('Choose data to export', options)
 
@@ -156,12 +156,14 @@ def _plot_and_export(args: argparse.Namespace, voltammogram: Voltammogram) -> No
     print('\nPlotting data...')
     print('Close plot window to continue...')
     if args.view is True:
-        CV_Plot(voltammogram, voltammogram.raw_data, view_only=True)
+        CV_Plot(voltammogram, voltammogram.segments, view_only=True)
 
     else:
         files_exported = []
 
-        CV_Plot(voltammogram, voltammogram.processed_data, pub_quality=args.pub_quality)
+        CV_Plot(
+            voltammogram, voltammogram.trimmed_segments, pub_quality=args.pub_quality
+        )
 
         if args.no_export is False:
             files_exported.extend(prompt_for_export(voltammogram))

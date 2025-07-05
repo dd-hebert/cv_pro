@@ -19,6 +19,7 @@ from rich.text import Text
 from cv_pro.utils.config import PRIMARY_COLOR
 
 if TYPE_CHECKING:
+    from cv_pro.segment import Segment
     from cv_pro.voltammogram import Voltammogram
 
 COLORS = {
@@ -132,11 +133,7 @@ class ProcessingOutput:
             renderables.extend(
                 [
                     '',
-                    self.ehalfs_panel(
-                        voltammogram.E_halfs,
-                        voltammogram.peak_separations,
-                        voltammogram.trim,
-                    ),
+                    self.ehalfs_panel(voltammogram.trimmed_segments),
                 ]
             )
 
@@ -153,7 +150,7 @@ class ProcessingOutput:
         subtitle = [
             Text.assemble(
                 'Total segments: ',
-                (f'{len(voltammogram.raw_data.columns)}', STYLES['bold']),
+                (f'{len(voltammogram.segments)}', STYLES['bold']),
             ),
         ]
 
@@ -225,21 +222,17 @@ class ProcessingOutput:
             subtitle=Text('\t').join(subtitle),
         )
 
-    def ehalfs_panel(self, E_halfs, peak_separations, trim) -> Panel:
+    def ehalfs_panel(self, segments: list[Segment]) -> Panel:
         tables = []
-        for i, (e_half, peak_sep) in enumerate(zip(E_halfs, peak_separations)):
-            if i < len(E_halfs):
-                if trim is not None:
-                    j = i + trim[0]
-                e_half.sort(reverse=True)
-                table = Table(f'Segment {j} → {j + 1}', box=box.SIMPLE_HEAD)
+        for segment in segments[:-1]:
+            i = segment.index + 1
+            table = Table(f'Segment {i} → {i + 1}', box=box.SIMPLE_HEAD)
 
-                for e, sep in zip(e_half, peak_sep):
-                    table.add_row('{: .3f} ({:.3f})'.format(e, sep))
+            for e, sep in zip(segment.ehalfs, segment.peak_separations):
+                table.add_row('{: .3f} ({:.3f})'.format(e, sep))
 
             tables.append(table)
 
-        # return Columns(tables, align='center', title='E1/2')
         return fancy_panel(
             Columns(tables, align='center'), title='E1/2 and Peak Separations'
         )

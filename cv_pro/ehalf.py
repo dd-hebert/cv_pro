@@ -1,26 +1,22 @@
 import numpy as np
 import pandas as pd
 
+from cv_pro.segment import Segment
 
-def find_ehalfs(
-    cv_traces: pd.DataFrame, peaks: dict, peak_sep_limit: float = 0.2
-) -> tuple[list[list[float]], list[list[float]]]:
+
+def find_ehalfs(segments: list[Segment], peak_sep_limit: float = 0.2) -> None:
     """
-    Find E1/2 values for peak pairs between consecutive segments that are within peak_sep_limit.
+    Find E1/2 values for peak pairs between consecutive segments that are within `peak_sep_limit`.
 
     For cyclic voltammetry, E1/2 is calculated as the midpoint between oxidation and reduction
     peaks that form a reversible couple.
 
     Parameters
     ----------
-    voltammogram : :class:`~cv_pro.voltammogram.Voltammogram`
-        The CV data to find E1/2 values with.
-
-    Returns
-    -------
-    tuple[list[list[float]], list[list[float]]]
-        - E_halfs: List of E1/2 values for each segment pair
-        - peak_separations: List of peak separations for each matched pair
+    segments : list[:class:`~cv_pro.segment.Segment`]
+        The CV segment traces to find E1/2 values for.
+    peak_sep_limit : float
+        The maximum separation between peaks (in V) to calculate E1/2 for.
 
     Notes
     -----
@@ -28,43 +24,32 @@ def find_ehalfs(
     1. Their separation is within peak_sep_limit
     2. They follow the correct electrochemical order (oxidation precedes reduction or vice versa)
     """
-    n_segments = len(cv_traces.columns) - 1
-    e_halfs = []
-    peak_separations = []
-
-    for i in range(n_segments):
-        segment_ehalfs, segment_separations = _process_segment_pair(
-            cv_traces, i, peaks, peak_sep_limit
-        )
-        e_halfs.append(segment_ehalfs)
-        peak_separations.append(segment_separations)
-
-    return e_halfs, peak_separations
+    for segment_pair in zip(segments, segments[1:]):
+        ehalfs, peak_separations = _process_segment_pair(segment_pair, peak_sep_limit)
+        segment_pair[0].ehalfs = ehalfs
+        segment_pair[0].peak_separations = peak_separations
 
 
 def _process_segment_pair(
-    cv_traces: pd.DataFrame, segment_idx: int, peaks: dict, peak_sep_limit: float = 0.2
+    segment_pair: tuple[Segment, Segment], peak_sep_limit: float = 0.2
 ) -> tuple[list[float], list[float]]:
     """
     Process a pair of consecutive segments to find E1/2 values.
 
     Parameters
     ----------
-    voltammogram : :class:`~cv_pro.voltammogram.Voltammogram`
-        The CV data to find E1/2 values with.
-    segment_idx : int
-        Index of the first segment in the pair
+    segment_pair : tuple[:class:`~cv_pro.segment.Segment`, :class:`~cv_pro.segment.Segment`]
+        A pair of CV segment traces to find E1/2 values with.
 
     Returns
     -------
     tuple[list[float], list[float]]
         E1/2 values and peak separations for this segment pair
     """
-    current_segment = cv_traces.iloc[:, segment_idx]
-    next_segment = cv_traces.iloc[:, segment_idx + 1]
+    current_segment, next_segment = segment_pair
 
-    current_peaks = peaks[current_segment.name]
-    next_peaks = peaks[next_segment.name]
+    current_peaks = current_segment.peaks
+    next_peaks = next_segment.peaks
 
     if len(current_peaks) == 0 or len(next_peaks) == 0:
         return [], []
@@ -97,7 +82,8 @@ def _extract_peak_coordinates(
         List of (potential, current) tuples for each peak
     """
     return [
-        (segment.index[peak_idx], segment.iloc[peak_idx]) for peak_idx in peak_indices
+        (segment.processed.index[peak_idx], segment.processed.iloc[peak_idx])
+        for peak_idx in peak_indices
     ]
 
 
@@ -121,7 +107,7 @@ def _find_matching_peaks(
     tuple[list[float], list[float]]
         E1/2 values and peak separations for matched pairs
     """
-    e_halfs = []
+    ehalfs = []
     separations = []
 
     for potential_a, current_a in current_peaks:
@@ -130,11 +116,12 @@ def _find_matching_peaks(
 
             if separation <= peak_sep_limit:
                 if _is_valid_peak_pair(potential_a, current_a, potential_b, current_b):
-                    e_half = _calculate_e_half(potential_a, potential_b)
-                    e_halfs.append(e_half)
+                    ehalf = _calculate_e_half(potential_a, potential_b)
+                    ehalfs.append(ehalf)
                     separations.append(separation)
 
-    return e_halfs, separations
+    # Sort by E1/2
+    return zip(*sorted(zip(ehalfs, separations), key=lambda x: x[0], reverse=True))
 
 
 def _is_valid_peak_pair(

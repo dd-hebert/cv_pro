@@ -8,12 +8,14 @@ Created on Thu May 25 2023
 """
 
 from pathlib import Path
+from typing import Literal
 
 import pandas as pd
 
 from cv_pro.ehalf import find_ehalfs
 from cv_pro.io.export_csv import export_csv
 from cv_pro.io.parse_bin import parse_bin_file
+from cv_pro.segment import Segment
 from cv_pro.utils._rich import ProcessingOutput
 
 
@@ -83,12 +85,13 @@ class Voltammogram:
         self.trim = trim
         self.reference = reference
         self.peak_sep_limit = peak_sep_limit
-        self.raw_data, self.parameters = parse_bin_file(self.path)
+        self.segments, self.parameters = parse_bin_file(self.path)
 
+        self.trimmed_segments = self.segments.copy()
         self.peaks = None
         self.E_halfs = None
         self.peak_separations = None
-        self.processed_data = None
+        self.processed_segments = None
         self.is_processed = False
 
         if not view_only:
@@ -98,75 +101,53 @@ class Voltammogram:
         return ProcessingOutput(self)
 
     def process_data(self) -> None:
-        self.processed_data = self.raw_data.copy()
-
+        """Apply processing (trimming, x-axis correction, E1/2 calculation) to CV data."""
         if self.trim is not None:
             self._check_trim_values()
-            self.processed_data = self.trim_data(self.processed_data)
+            self.trimmed_segments = self.trim_data(self.trimmed_segments)
 
         if self.reference != 0:
-            self.processed_data = self._apply_correction(self.processed_data)
+            self.apply_correction(self.trimmed_segments)
 
-        self.peaks = self.find_peaks(self.processed_data)
-        self.E_halfs, self.peak_separations = find_ehalfs(
-            self.processed_data, self.peaks, self.peak_sep_limit
-        )
+        self.find_peaks(self.trimmed_segments)
+        find_ehalfs(self.trimmed_segments, self.peak_sep_limit)
 
         self.is_processed = True
 
-    def trim_data(self, cv_traces: pd.DataFrame) -> pd.DataFrame:
-        before = f'Segment_{self.trim[0]}'
-        after = f'Segment_{self.trim[1]}'
-        return cv_traces.truncate(before, after, axis='columns', copy=True)
+    def trim_data(self, segments: list[Segment]) -> list[Segment]:
+        """Remove traces outside the given range of trace indices."""
+        trim_before = self.trim[0] - 1  # Convert to 0-based indexing
+        trim_after = self.trim[1]
+        return segments[trim_before:trim_after]
 
-    def find_peaks(self, cv_traces: pd.DataFrame) -> list:
-        """
-        Find peaks in the CV segments.
+    def find_peaks(self, segments: list[Segment]) -> None:
+        """Find peaks in the CV segment traces."""
+        for segment in segments:
+            segment.find_peaks()
 
-        Parameters
-        ----------
-        cv_traces : :class:`pandas.DataFrame`
-            The CV traces to find peaks with.
-
-        Returns
-        -------
-        peaks : list
-            Returns a list of :func:`scipy.signal.find_peaks()` results.
-        """
-        from scipy.signal import find_peaks
-
-        peaks = {
-            name: find_peaks(abs(segment), width=20)[0]
-            for name, segment in cv_traces.items()
-        }
-        return peaks
-
-    def _apply_correction(self, data: pd.DataFrame) -> pd.DataFrame:
-        """
-        Correct the x-axis to be relative to the reference redox couple.
-
-        Parameters
-        ----------
-        data: :class:`pandas.DataFrame`
-            The CV data to apply a correction to.
-
-        Returns
-        -------
-        :class:`pandas.DataFrame`
-            A :class:`pandas.DataFrame` containing the corrected CV data.
-        """
-        corrected_data = data
-        corrected_data.index = corrected_data.index - self.reference
-        return corrected_data
+    def apply_correction(self, segments: list[Segment]) -> None:
+        """Apply a correction to the x-axis of the CV segment traces."""
+        for segment in segments:
+            segment.apply_correction(self.reference)
 
     def _check_trim_values(self) -> None:
         start, end = self.trim
         start = max(start, 1)
 
-        if end >= len(self.raw_data.columns) or end == -1:
-            end = len(self.raw_data.columns)
+        if end >= len(self.segments) or end == -1:
+            end = len(self.segments)
 
         self.trim = (start, end)
 
-    def export_csv(self, data: pd.DataFrame, suffix: str | None = None) -> None:
-        return export_csv(data, self.path.parent, Path(self.name).stem, suffix=suffix)
+    def export_csv(
+        self,
+        segments: list[Segment],
+        data_type: Literal['raw', 'processed'] = 'processed',
+        suffix: str | None = None,
+    ) -> None:
+        df = pd.concat([getattr(segment, data_type) for segment in segments], axis=1)
+        df.columns = [
+            f'Segment_{segment.index + 1} Current (A)' for segment in segments
+        ]
+        df.sort_index(inplace=True)
+        return export_csv(df, self.path.parent, Path(self.name).stem, suffix=suffix)
