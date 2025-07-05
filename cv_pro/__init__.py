@@ -25,4 +25,4 @@ Created on Sat May 27 2023
 """
 
 __author__ = 'David Hebert'
-__version__ = '0.1.0'
+__version__ = '0.1.1'
