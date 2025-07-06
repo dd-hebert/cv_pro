@@ -143,5 +143,4 @@ def _get_segments(
         segment = Segment(i, ser)
         segments.append(segment)
 
-    print([segment.index for segment in segments])
     return segments
