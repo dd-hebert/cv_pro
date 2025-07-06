@@ -32,7 +32,7 @@ Optional Args
     the data set is shown. Default is False.
 -ne, --no-export : flag, optional
     Bypass the "export data" prompt at the end of the script.
--t, --trim : int int, optional
+-tr, --trim : int int, optional
     Use ``trim`` to select a specific portion of the CV data. The first value
     ``trim[0]`` is the first segment to plot or export, and the second value
     ``trim[1]`` is the total number of segments to plot or export. For example,
