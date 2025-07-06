@@ -120,8 +120,7 @@ def _find_matching_peaks(
                     ehalfs.append(ehalf)
                     separations.append(separation)
 
-    # Sort by E1/2
-    return zip(*sorted(zip(ehalfs, separations), key=lambda x: x[0], reverse=True))
+    return ehalfs, separations
 
 
 def _is_valid_peak_pair(
