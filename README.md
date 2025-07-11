@@ -13,100 +13,95 @@ Contents
 
 Installation
 ------------
-If you have git installed on your system, you can directly install ``cv_pro`` from this repo using pip:
-
-```
-pip install git+https://github.com/dd-hebert/cv_pro.git
-```
-
-Otherwise, clone this repo and use [setuptools](https://setuptools.pypa.io/en/latest/userguide/quickstart.html) to build the package (``python -m build``) then use pip to install the resulting ``.whl`` file.
+Clone this repo and use [setuptools](https://setuptools.pypa.io/en/latest/userguide/quickstart.html) and [build](https://pypi.org/project/build/) to build the package (``python -m build``) then use pip to install the resulting ``.whl`` file.
 
 Command Line Interface
 ----------------------
-With ``cv_pro`` installed, you can run the script directly from the command line using the ``cvp`` shortcut. To begin processing data, use ``-p`` and specify the path to your data:
+With ``cv_pro`` installed, you can run the script directly from the command line using the ``cvp`` shortcut. To begin processing data, use ``process`` and specify the path to your data:
 
 **Process .bin file:**
 ```
-cvp -p path\to\your\data.bin
+cvp process path\to\your\data.bin
 ```
 
-**Tip:** You can use shorter paths by setting a **root directory** or by simply opening a terminal session inside the same folder as your data files.
+**Tip:** You can use shorter paths by setting a [**root directory**](#file-paths--root-directory) or by simply opening a terminal session inside the same directory as your data files.
 
 
 Command Line Arguments
 ----------------------
-- [Data Processing Args](#data-processing-args)
-- [User Config Args](#user-config-args)
-- [Other Args](#other-args)
+- [Data Processing Args](#data-processing-args-process-proc-p)
+- [User Config Args](#user-config-args-config-cfg)
+- [Other Args](#other-args-and-subcommands)
 
-### Data Processing Args
-Args related to data processing.
+### Data Processing Args (process, proc, p)
+Process CV data with the ``process`` subcommand.
 
-#### ``-p``, ``--path`` : string, required
-The path to the CV data .bin file. You can use a path relative to the current working directory, an absolute path, or a path relative to the root directory (if one has been set).
+**Usage:**
+``cvp process <path> <options>``, ``cvp proc <path> <options>``, or ``cvp p <path> <options>``
 
-#### ``-fc``, ``--ferrocenium`` : float, optional
-Set the relative potential of the Fc/Fc<sup>+</sup> redox couple (given in V) to adjust the x-axis for data reporting.
+#### ``path`` : string, required
+The path to a CV data .bin file. You have three options for specifying the path: you can use a **path relative to the current working directory**, an **absolute path**, or a **path relative to the root directory** (if one has been set).
 
-#### ``-sep``, ``--peak_sep_limit`` : float, optional
-The maximum distance (given in V) between two peaks for them to be considered "reversible". If the distance between two peaks if within the limit, E<sub>1/2</sub> calculations will be attempted.
-
-#### ``-t``, ``--trim`` : 2 integers, optional
-Use ``-t`` to select a specific portion of CV data. The first integer is the first sweep to select, and the second integer is the total number of sweeps to show. Give ``0`` for the second value to show all sweeps following the sweep specified by the first value.
-
-```
-# Show 2 sweeps starting from the 2nd sweep
-cvp -p C:\Desktop\MyData\myfile.bin -t 2 2
-
-# Show all sweeps after the 3rd sweep
-cvp -p C:\Desktop\MyData\myfile.bin -t 3 0
-```
+#### ``-ne``, ``--no-export`` : flag, optional
+Bypass the data export prompt at the end of the script.
 
 #### ``-v`` : flag, optional
 Enable view only mode. No data processing is performed and a plot of the data set is shown.
 
-### User Config Args
-Args related to user-configured settings.
+#### ``-fc``, ``--ferrocenium`` : float, optional
+Set the relative potential of the Fc/Fc<sup>+/0</sup> redox couple (given in V) to adjust the x-axis for data reporting.
 
-#### ``-crd``, ``-–clear_root_dir`` : flag, optional
-Reset the root directory back to the default location (in the user's home directory).
+#### ``-sep``, ``--peak_sep_limit`` : float, optional
+The maximum distance (given in V) between two peaks for them to be considered "reversible". If the distance between two peaks if within the limit, E<sub>1/2</sub> calculations will be attempted.
 
-#### ``-grd``, ``–-get_root_dir`` : flag, optional
-Print the current root directory to the console.
+#### ``-tr``, ``--trim`` : 2 integers, optional
+Use ``-tr`` to select a range of CV segment traces. Segments are numbered in order starting from 1. Segments before the first integer and after the second integer will be removed. Give ``-1`` for the second value to show all sweeps following the sweep specified by the first value.
 
-#### ``-srd``, ``-–set_root_dir`` : string, optional
-Specify a root directory to simplify file path entry. For instance, if you store all your CV data files in a common folder, you can designate it as the root directory. Subsequently, any path provided with ``-p`` is assumed to be relative to the root directory.
-
-**Without root directory:**
 ```
-# Must type full file path
-cvp -p C:\mydata\CV_Data\mydata.bin
-```
+# Keep only the second and third sweep
+cvp p C:\Desktop\MyData\myfile.bin -tr 2 3
 
-Without a root directory, you must type the full path to the data. 
-
-**With root directory:**
-```
-# Set the root directory
-cvp -srd C:\mydata\CV_Data
-
-# Only need short file path
-cvp -p mydata.bin
+# Show all sweeps after the 4th sweep
+cvp p C:\Desktop\MyData\myfile.bin -tr 4 -1
 ```
 
-By setting a root directory, you can omit the root directory part of the path. The root directory is saved between runs in a config file.
+#### ``--pub`` : flag, optional
+Generate a publication quality figure (BETA).
 
-### Other args
-Other miscellaneous args.
+___
+### User Config Args (config, cfg)
+View, edit, or reset user-configured settings with the ``config`` subcommand.
 
-#### ``-h``, ``--help`` : flag
-Use ``-h`` to get help with command line arguments.
+**Usage:**
+``cvp config <option>`` or ``cvp cfg <option>``
 
-#### ``-fp``, ``--file_picker`` : flag, optional
-Interactively pick a .bin file from the terminal. The file is opened in view only mode.
+Current user-configurable settings:
 
-#### ``--tree`` : flag, optional
-Print the ``root_directory`` file tree to the console.
+- ``root_directory`` - A base directory which contains UV-vis data files. Set a root directory to enable the use of shorter, relative file paths.
+
+- ``primary_color`` - The main color used in terminal output. Can be set to any of the 8 basic ANSI colors.
+
+#### ``--delete`` : flag, optional
+Delete the config file and directory. The config file is located in ``.config/uv_pro/`` inside the user's home directory.
+
+#### ``-e``, ``--edit`` : flag, optional
+Edit configuration settings. Will prompt the user for a selection of configuration settings to edit.
+
+#### ``-l``, ``--list`` : flag, optional
+Print the current configuration settings to the console.
+
+#### ``-r``, ``--reset`` : flag, optional
+Reset configuration settings back to their default value. Will prompt the user for a selection of configuration settings to reset.
+
+___
+### Other args and subcommands
+Other miscellaneous args and subcommands.
+
+#### ``-h``, ``--help`` : flag, optional
+Use ``-h`` to get help with command line arguments. Get help for specific commands with ``cvp <command> -h``.
+
+#### ``tree`` : subcommand
+Print the root directory file tree to the console. Usage: ``cvp tree``.
 
 Examples
 --------
@@ -115,32 +110,68 @@ Import the data from ``myfile.bin``, set the ferrocenium reference couple to +0.
 cvp -p C:\Desktop\MyData\myfile.bin -t 2 2 -fc 0.08
 ```
 
+File Paths & Root Directory
+---------------------------
+``cv_pro`` is flexible in handling file paths. When you give a path at the terminal, you can provide a full absolute path:
+```
+cvp p C:\full\path\to\your\data\file.KD
+```
+Alternatively, you can open a terminal session inside a directory containing a data file and use a relative path:
+```
+# Current working directory = C:\full\path\to\your\data
+cvp p file.bin
+```
+
+Setting a root directory can simplify file path entry. For instance, if you store all your CV data files in a common folder, you can designate it as the root directory. Subsequently, any path provided with ``process`` can be given relative to the root directory.
+
+***Without* root directory:**
+```
+# Must type full file path
+cvp p "C:\mydata\CV Data\mydata.bin"
+```
+
+Without a root directory, you must type the full path ``"C:\mydata\CV Data\mydata.bin"`` to the data. 
+
+***With* root directory:**
+```
+# Set the root directory.
+cvp config -edit
+
+# Select the root directory setting and enter the desired path, for example:
+"C:\mydata\CV Data"
+
+# Now, a shorter relative path can be used.
+cvp p mydata.bin
+```
+
+With a root directory set, for example ``"C:\mydata\CV Data"``, you can omit that part of the path and just give a relative path ``mydata.bin``. The root directory is saved between runs in a config file.
+
 Multiview Mode
 --------------
-You can open multiple .bin files (in view-only mode) from the command line at once with the ``Multiviewer`` script. Navigate to a directory containing .bin files and run the command:
+You can open multiple .KD files (in *view-only* mode) simultaneously with the ``multiviewer`` subcommand. Navigate to a directory containing .bin files and run the command:
 ```
-cvpmv -f some search filters
+cvp mv -f some search filters
 ```
 
-The script will open .bin files which contain any of the supplied search filters in view_only mode.
+The script will open .bin files which contain any of the supplied search filters in *view-only* mode. You can omit the ``-f`` argument to open *all* .bin files in the current working directory.
 
-The default search behavior is an *OR* search. You can use supply the ``-a`` or ``--and_filter`` argument to perform an *AND* search:
+The default search behavior is an *OR* search. You can use the ``-a`` or ``--and-filter`` argument to perform an *AND* search:
 ```
-cvpmv -f some search filters -a
+cvp mv -f some search filters -a
 ```
 
 Now only .bin files with contain *all* of the search filters in their name will be opened.
 
 **Examples:**
 ```
-cvpmv -f copper DMF
+cvp mv -f copper DMF
 ```
 OR search, open .bin files with ``copper`` *OR* ``DMF`` in their filename.
 
 ```
-cvpmv -f copper DMF FcPF6 -a
+cvp mv -f copper DMF RT -a
 ```
-AND search, open .bin files with ``copper``, ``DMF``, *AND* ``FcPF6`` in their filename.
+AND search, open .bin files with ``copper``, ``DMF``, *AND* ``RT`` in their filename.
 
 Uninstall
 ---------
