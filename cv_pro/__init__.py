@@ -8,11 +8,11 @@ be imported, processed, and exported as .csv.
 
 You can run cv_pro directly from the command line using::
 
-    cvp -p <"path"> <optional_args>
+    cvp p <"path"> <optional_args>
 
 Or you can run cv_pro using runpy with::
 
-    python -m cv_pro -p <"path"> <optional_args>
+    python -m cv_pro p <"path"> <optional_args>
 
 See the documentation or the cli.py docstring from more information on the
 optional command line arguments.
@@ -25,4 +25,4 @@ Created on Sat May 27 2023
 """
 
 __author__ = 'David Hebert'
-__version__ = '0.0.10'
+__version__ = '0.1.1'

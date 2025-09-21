@@ -6,8 +6,8 @@ Created on Fri May 26 2023
 
 @author: David Hebert
 """
+
 import matplotlib.pyplot as plt
-from cv_pro.utils.helpers import check_start_and_segments
 
 
 class CV_Plot:
@@ -16,13 +16,13 @@ class CV_Plot:
 
     Attributes
     ----------
-    voltammogram : :class:`~cv_pro.process.Voltammogram`
+    voltammogram : :class:`~cv_pro.voltammogram.Voltammogram`
         The Voltammogram to plot.
     reference : float
         The reference potential value.
     name : str
         The name of the voltammogram.
-    data : dict
+    data : :class:`pandas.DataFrame`
         The voltammogram data.
     peaks : list
         List of peak indices for each segment.
@@ -32,7 +32,13 @@ class CV_Plot:
         List of peak separations for each segment.
     """
 
-    def __init__(self, voltammogram, plot_start=1, plot_segments=0, view_only=False, pub_quality=False):
+    def __init__(
+        self,
+        voltammogram,
+        segments,
+        view_only=False,
+        pub_quality=False,
+    ):
         """
         Initialize the CV_Plot object.
 
@@ -50,20 +56,19 @@ class CV_Plot:
         pub_quality : bool, optional
             Generate a publicatoin-quality plot. The default is False.
         """
-        self.voltammogram = voltammogram
+        self.segments = segments
         self.reference = voltammogram.reference
         self.name = voltammogram.name
-        self.data = voltammogram.voltammogram
+        # self.raw_data = voltammogram.raw_data
+        # self.processed_data = voltammogram.processed_data
 
         if view_only:
-            self.plot_start = 1
-            self.plot_segments = len(self.data)
             self.plot_CV(view_only=view_only)
         else:
-            self.plot_start, self.plot_segments = check_start_and_segments(self.data, plot_start, plot_segments)
             self.peaks = voltammogram.peaks
             self.E_halfs = voltammogram.E_halfs
             self.peak_separations = voltammogram.peak_separations
+            self.init_sweep_direction = voltammogram.parameters.init_sweep_direction
 
             if pub_quality:
                 self.plot_CV_publication_quality()
@@ -93,9 +98,7 @@ class CV_Plot:
             self._plot_peaks(ax)
             self._plot_e_half_labels(ax)
             self._add_reference_text(ax)
-            # self._add_e_half_text(fig, 0.1, -0.05, -0.05)
 
-        print('Close plot window to continue...')
         plt.show()
 
     def plot_CV_publication_quality(self):
@@ -111,23 +114,25 @@ class CV_Plot:
         """
         fig, ax = self._create_plot()
         plt.title(None)
-        plt.xticks(fontsize='small')
+        plt.xticks(fontsize='large')
+        plt.tick_params('x', width=1.5, length=6)
         if self.reference != 0:
-            plt.xlabel('${{E}}$ (V vs. Fc$^{{0/+}}$)', fontsize='small')
+            plt.xlabel('${{E}}$ (V vs. Fc$^{{+/0}}$)', fontsize='large')
         else:
-            plt.xlabel('${{E}}$ (V)', fontsize='small')
+            plt.xlabel('${{E}}$ (V)', fontsize='large')
 
         self._plot_cv_curves(ax)
-        [line.set(linewidth=2, color="black") for line in ax.get_lines()]
+        [line.set(linewidth=2, color='black') for line in ax.get_lines()]
 
         self._add_sweep_direction_arrow(ax)
 
         ax.get_yaxis().set_visible(False)
-        [ax.spines[side].set_visible(False) for side in ['top', 'left', 'right']]
+        # [ax.spines[side].set_visible(False) for side in ['top', 'left', 'right']]
+        ax.spines[:].set_linewidth(1.5)
 
         ax.set_ylim(ax.get_ylim()[0] * 1.5, ax.get_ylim()[1] * 1.5)
         ax.set_xlim(round(ax.get_xlim()[0], 1), round(ax.get_xlim()[1], 1))
-
+        plt.tight_layout()
         plt.show()
 
     def _create_plot(self):
@@ -139,90 +144,90 @@ class CV_Plot:
         return fig, ax
 
     def _plot_cv_curves(self, ax):
-        for i in range(self.plot_start - 1, self.plot_start + self.plot_segments - 1):
-            ax.plot(self.data[i]['Potential (V)'] - self.reference,
-                    self.data[i]['Current (A)'])
+        for segment in self.segments:
+            seg = segment.processed.dropna()
+            ax.plot(seg)
 
     def _plot_peaks(self, ax):
-        for i, line in zip(range(self.plot_start - 1, self.plot_start + self.plot_segments - 1), ax.get_lines()):
-            peak_index = self.peaks[i][0]
-            potentials = self.data[i]['Potential (V)'][peak_index] - self.reference
-            currents = self.data[i]['Current (A)'][peak_index]
+        for segment, line in zip(self.segments, ax.get_lines()):
+            potentials = segment.processed.index[segment.peaks]
+            currents = segment.processed.iloc[segment.peaks]
             color = line.get_color()
             ax.scatter(potentials, currents, color=color)
 
-            if self.plot_segments == 1:
-                for peak in peak_index:
-                    potential = self.data[i]['Potential (V)'][peak] - self.reference
-                    current = self.data[i]['Current (A)'][peak]
-                    label = f"{round(potential, 3)}"
+            if len(self.segments) == 1:
+                segment = self.segments[0]
+                for peak in segment.peaks:
+                    potential = segment.processed.index[peak]
+                    current = segment.processed.iloc[peak]
+                    label = f'{round(potential, 3)}'
                     point = (potential, current)
                     ax.annotate(label, point, xytext=(5, 5), textcoords='offset points')
 
     def _plot_e_half_labels(self, ax):
-        for i in range(self.plot_start - 1, self.plot_start + self.plot_segments - 2):
-            for e_half in self.E_halfs[i]:
-                raw_e_half = round(e_half + self.reference, 3)
-                index1 = self.data[i]['Potential (V)'][self.data[i]['Potential (V)'] == raw_e_half].index
-                index2 = self.data[i + 1]['Potential (V)'][self.data[i + 1]['Potential (V)'] == raw_e_half].index
+        for current_segment, next_segment in zip(self.segments, self.segments[1:]):
+            for ehalf in current_segment.ehalfs:
+                e = round(ehalf, 3)
 
                 try:
-                    y1 = self.data[i]['Current (A)'][index1[0]]
-                    y2 = self.data[i + 1]['Current (A)'][index2[0]]
-                except IndexError:
+                    y1 = current_segment.processed.loc[e]
+                    y2 = next_segment.processed.loc[e]
+                except KeyError:
                     pass
                 else:
                     vertical_mid_point = 0.5 * (y1 - y2) + y2
-                    label = f"{e_half} V"
-                    point = (e_half, vertical_mid_point)
+                    label = f'{ehalf} V'
+                    point = (ehalf, vertical_mid_point)
 
-                    ax.annotate(label, point,
-                                xytext=(5, 0),
-                                textcoords='offset points')
+                    ax.annotate(label, point, xytext=(5, 0), textcoords='offset points')
 
                     if y1 > y2:
-                        ax.vlines(e_half, y2, y1, color='lightgray', linestyle=":")
+                        ax.vlines(ehalf, y2, y1, color='lightgray', linestyle=':')
                     else:
-                        ax.vlines(e_half, y1, y2, color='lightgray', linestyle=":")
+                        ax.vlines(ehalf, y1, y2, color='lightgray', linestyle=':')
 
     def _add_reference_text(self, ax):
         if self.reference != 0:
-            ax.text(0.99, 0.01, f'Fc/Fc+ = {self.reference} V',
-                    verticalalignment='bottom',
-                    horizontalalignment='right',
-                    transform=ax.transAxes,
-                    color='gray',
-                    fontsize=8)
+            ax.text(
+                0.99,
+                0.01,
+                f'Fc+/Fc = {self.reference} V',
+                verticalalignment='bottom',
+                horizontalalignment='right',
+                transform=ax.transAxes,
+                color='gray',
+                fontsize=8,
+            )
 
-    def _add_e_half_text(self, fig, text_x, text_y, vertical_offset):
-        text = 'E' + r'$_{1/2}$' + ' [V] (peak separation [V])'
-        fig.text(text_x, text_y, text, ha='left', fontweight='bold')
+    def _add_sweep_direction_arrow(
+        self, ax, arrow_length=20, width=0.5, headwidth=8, headlength=8, color="black"
+    ):
+        segment = self.segments[0]
+        n_points = len(segment.processed)
+        segment_midpoint = n_points // 2
+        offset = min(arrow_length, n_points - segment_midpoint - 1)
 
-        for i, (e_half, peak_sep) in enumerate(zip(self.E_halfs, self.peak_separations)):
-            if e_half:
-                text_y += vertical_offset
-                segment_text = f'Segment {i + 1}→{i + 2}: '
-                e_half.sort(reverse=True)
-                value_text = ', '.join([f'{value} ({round(peak_sep, 3)})'
-                                        for value, peak_sep in zip(e_half, peak_sep)])
-                segment_text += value_text
-                fig.text(text_x, text_y, segment_text, ha='left')
+        # Coordinates
+        x1 = segment.processed.index[segment_midpoint + offset]
+        y1 = segment.processed.iloc[segment_midpoint + offset]
+        x2 = segment.processed.index[segment_midpoint]
+        y2 = segment.processed.iloc[segment_midpoint]
 
-    def _add_sweep_direction_arrow(self, ax):
-        segment_midpoint = len(self.data[self.plot_start - 1]) // 2
-        arrow_x1 = self.data[self.plot_start - 1]['Potential (V)'].iloc[segment_midpoint + 20] - self.reference
-        arrow_x2 = self.data[self.plot_start - 1]['Potential (V)'].iloc[segment_midpoint] - self.reference
+        # Direction: even vs odd segment
+        if segment.index % 2 == 0:
+            start, end = (x2, y2), (x1, y1)
+        else:
+            start, end = (x1, y1), (x2, y2)
 
-        arrow_y1 = self.data[self.plot_start - 1]['Current (A)'].iloc[segment_midpoint + 20]
-        arrow_y2 = self.data[self.plot_start - 1]['Current (A)'].iloc[segment_midpoint]
-
-        arrow_width = 0.5
-        arrow_headwidth = 6
-        arrow_headlength = 6
-        ax.annotate("",
-                    xy=(arrow_x1, arrow_y1),
-                    xytext=(arrow_x2, arrow_y2),
-                    arrowprops=dict(width=arrow_width,
-                                    headwidth=arrow_headwidth,
-                                    headlength=arrow_headlength,
-                                    color='black'))
+        # Draw arrow
+        ax.annotate(
+            "",
+            xy=end,
+            xytext=start,
+            arrowprops=dict(
+                width=width,
+                headwidth=headwidth,
+                headlength=headlength,
+                color=color,
+            ),
+        )

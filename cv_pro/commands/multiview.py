@@ -1,0 +1,152 @@
+"""
+View multiple .bin files from the command line.
+
+Navigate to a directory containing .bin files and run the command::
+
+    cvp mv -f some search filters
+
+The script will open .bin files which contain any of the supplied search filters
+in ``view_only`` mode.
+
+The default search behavior is an `OR` search. You can supply the ``-a`` or
+``--and-filter`` argument to perform an `AND` search::
+
+    cvp mv -f some search filters -a
+
+Now only .bin files with contain all of the search filters in their name will be
+opened.
+
+The ``-f`` filtering argument can be omitted to open all .bin files in the current working
+directory.
+
+@author: David
+"""
+
+import argparse
+import glob
+import subprocess
+from concurrent.futures import ThreadPoolExecutor
+
+from cv_pro.commands import Argument, command
+
+HELP = {
+    'filters': 'An arbitrary number of filters.',
+    'and-filter': '``and`` filter mode.',
+    'or-filter': '``or`` filter mode.',
+}
+ARGS = [
+    Argument(
+        '-f',
+        '--filters',
+        action='store',
+        nargs='*',
+        default='*',
+        metavar='',
+        help=HELP['filters'],
+    ),
+    Argument(
+        '-a',
+        '--and-filter',
+        dest='filter_mode',
+        action='store_const',
+        default='or',
+        const='and',
+        help=HELP['and-filter'],
+    ),
+]
+
+
+@command(args=ARGS, aliases=['mv'])
+def multiview(args: argparse.Namespace) -> None:
+    """
+    Open multilple .bin files in parallel (view-only mode).
+
+    Parameters
+    ----------
+    filters : list[str]
+        A list of search filter strings.
+    mode : str, optional
+        The filter mode, can be 'and' or 'or'. The default is 'or'.
+
+    Parser Info
+    -----------
+    *aliases : mv
+    *desc : Search for multiple CV data files in the current working directory \
+        and open them view-only mode.
+    *help : Open multiple CV data files in view-only mode.
+    """
+    _run_cvp_parallel(filter_files(args.filters, mode=args.filter_mode))
+
+
+def filter_files(filters: list[str], mode: str = 'or') -> set[str]:
+    """
+    Filter a list of files into a set.
+
+    Parameters
+    ----------
+    filters : list[str]
+        A list of search filter strings. Default is '*'.
+    mode : str, optional
+        The filter mode, can be 'and' or 'or'. The default is 'or'.
+
+    Returns
+    -------
+    files : set[str]
+        The filtered files.
+    """
+    search_patterns = [f'*{pattern}*.bin' for pattern in filters]
+
+    if mode == 'and':
+        files = set(glob.glob(search_patterns[0]))
+        for pattern in search_patterns[1:]:
+            files &= set(glob.glob(pattern))
+    else:
+        files = set(
+            [matches for pattern in search_patterns for matches in glob.glob(pattern)]
+        )
+
+    if len(files) == 0:
+        print('Error: No .bin files found with the specified filter(s).')
+        return
+
+    return files
+
+
+def _run_cvp_subprocess(file: str) -> None:
+    """
+    Run the cvp script as a subprocess.
+
+    Parameters
+    ----------
+    file : str
+        A file name.
+    """
+    try:
+        subprocess.run(
+            ['cvp', 'process', file, '-v'],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT,
+        )
+
+    except Exception as e:
+        print(f'An error occurred while processing the file: {str(e)}')
+
+
+def _run_cvp_parallel(files: set[str]) -> None:
+    """
+    Run the ``cvp`` script on a list of files in parallel using ThreadPoolExecutor.
+
+    Parameters
+    ----------
+    files : set[str]
+        A set of file names.
+    """
+    try:
+        with ThreadPoolExecutor(max_workers=50) as executor:
+            executor.map(_run_cvp_subprocess, files)
+
+    except TypeError:
+        pass
+
+    except Exception as e:
+        print(f'An error occurred while processing the files: {str(e)}')

@@ -32,10 +32,10 @@ def check_start_and_segments(voltammogram, data_start, num_segments):
     num_segments : int
         The number of CV segments of interest.
     """
-    if data_start > len(voltammogram):
-        data_start = len(voltammogram)
+    if data_start > len(voltammogram.columns):
+        data_start = len(voltammogram.columns)
     elif data_start <= 0:
         data_start = 1
-    if data_start + num_segments > len(voltammogram) or num_segments <= 0:
-        num_segments = len(voltammogram) - (data_start - 1)
+    if data_start + num_segments > len(voltammogram.columns) or num_segments <= 0:
+        num_segments = len(voltammogram.columns) - (data_start - 1)
     return data_start, num_segments

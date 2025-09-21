@@ -10,74 +10,104 @@ Created on Sat Jun 27 2023
 @author: David Hebert
 """
 
-import os
 from configparser import ConfigParser
+from pathlib import Path
+from typing import Callable, Optional
+
+from cv_pro.utils._defaults import CONFIG_MAP
+
+NAME = 'cv_pro'
+CONFIG_DIR = Path.home() / '.config' / NAME
+CONFIG_FILENAME = 'settings.ini'
+CONFIG_PATH = CONFIG_DIR / CONFIG_FILENAME
+DEFAULTS = {option: info['default_str'] for option, info in CONFIG_MAP.items()}
 
 
-class Config:
-    """
-    A class for handling config files.
+class Config(ConfigParser):
+    """wrapper for ConfigParser"""
 
-    Attributes
-    ----------
-    config : :class:`configparser.ConfigParser`
-        The current configuration.
-    directory : str
-        The path to the configuration file directory.
-    filename : str
-        The name of the configuration file.
-    name : str
-        The name of the configuration file.
-    """
+    def __init__(self):
+        super().__init__(defaults=DEFAULTS, default_section='Settings')
 
-    name = 'cv_pro'
-    directory = os.path.join(os.path.expanduser("~"), ".config", f"{name}")
-    filename = "settings.ini"
+        if not CONFIG_PATH.exists():
+            CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+            self._write()
 
-    def __init__(self) -> None:
-        if not self.exists():
-            self.create()
-            self.write_config(self.get_defaults())
-        self.config = self.get_config()
+        else:
+            self.read(CONFIG_PATH)
+            self.validate(verbose=True)
+            self._write()
 
-    def exists(self) -> bool:
-        """Check if config file exists."""
-        return os.path.exists(os.path.join(Config.directory, Config.filename))
-
-    def create(self) -> None:
-        """Create the config file directory."""
-        os.makedirs(Config.directory, exist_ok=True)
-
-    def get_defaults(self) -> ConfigParser:
-        """Get the default configuration."""
-        default_config = ConfigParser()
-        default_config['Settings'] = {"root_directory": ""}
-        return default_config
-
-    def reset(self) -> None:
-        """Reset the configuration to the default values."""
-        self.write_config(self.get_defaults())
-
-    def write_config(self, config: ConfigParser) -> None:
+    def _write(self) -> None:
         """Write settings to the config file."""
-        with open(os.path.join(Config.directory, Config.filename), "w") as f:
-            config.write(f)
+        with open(CONFIG_PATH, 'w') as f:
+            self.write(f)
 
-    def get_config(self) -> ConfigParser:
-        """Get the current configuration."""
-        config = ConfigParser()
-        config.read(os.path.join(Config.directory, Config.filename))
-        return config
+    def validate_option(self, option: str, verbose: bool = False) -> bool:
+        """Validate a config value. Return True if valid."""
+        option_info = CONFIG_MAP.get(option)
+        if self.has_option('Settings', option):
+            if value := self.get('Settings', option):
+                cleanup_func: Optional[Callable] = option_info.get('cleanup_func')
+                if cleanup_func:
+                    value = cleanup_func(value)
 
-    def modify(self, section: str, key: str, value: str) -> None:
-        """Modify a config value."""
-        self.config.set(section, key, value)
-        self.write_config(self.config)
+                validation_func: Callable = option_info.get('validate_func')
+                if validation_func(value, verbose):
+                    self.set('Settings', option, str(value))
+                    return True
 
-    def delete(self) -> None:
+        self.set('Settings', option, option_info.get('default_str'))
+
+        return False
+
+    def validate(self, verbose: bool = False) -> bool:
+        """Validate all config values. Return True if all valid."""
+        return all(
+            [self.validate_option(option, verbose) for option in CONFIG_MAP.keys()]
+        )
+
+    def delete(self) -> Exception | None:
         """Delete the config file and directory."""
         try:
-            os.remove(os.path.join(Config.directory, Config.filename))
-            os.rmdir(Config.directory)
-        except (OSError, FileNotFoundError):
-            pass
+            config_file = CONFIG_DIR / CONFIG_FILENAME
+            config_file.unlink()
+            CONFIG_DIR.rmdir()
+            return
+
+        except (OSError, FileNotFoundError) as e:
+            return e
+
+    def broadcast(self) -> list[tuple]:
+        """
+        Broadcast formatted config values.
+
+        Useful when config parameters are to be used programmatically.
+
+        Returns
+        -------
+        list[tuple[str, Any]]
+            A list of tuples with config parameter names (str) and formatted values (any).
+        """
+
+        def get_val(
+            option: str, section: str, type: callable, default_val=None, **kwargs
+        ):
+            try:
+                if value := self.get(section, option):
+                    return type(value)
+
+            except Exception as e:
+                print(
+                    f'Warning: Could not retrieve config value for [{section}] {option}: {e}'
+                )
+
+            return default_val
+
+        return [
+            (option, get_val(option, **info)) for option, info in CONFIG_MAP.items()
+        ]
+
+
+CONFIG = Config()
+PRIMARY_COLOR = CONFIG.get('Settings', 'primary_color', fallback='cyan')
