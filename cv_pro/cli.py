@@ -39,7 +39,7 @@ Optional Args
     to show the data starting from the 2nd segment and show 2 segments, use
     ``-t 2 2``.
 -fc, --ferrocenium : float, optional
-    The relative potential (given in V) of the Fc/Fc+ redox couple used to
+    The relative potential (given in V) of the Fc+/Fc redox couple used to
     correct the x-axis values.
 -sep, --peak-sep-limit : float, optional
     The maximum distance (given in V) between two peaks for them to be considered

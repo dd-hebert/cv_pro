@@ -18,7 +18,7 @@ HELP = {
     'path': 'Process .bin CV data file at the given path.',
     'view': 'Enable view only mode (no data processing).',
     'no-export': 'Skip the "export data" prompt at the end of the script.',
-    'ferrocenium': 'Set the relative potential of the Fc/Fc+ couple.',
+    'ferrocenium': 'Set the relative potential of the Fc+/Fc couple.',
     'peak-sep-limit': 'Set the peak separation limit in V when finding E1/2s.',
     'trim': '2 integers: Trim the data, keeping segment START through segment END.',
     'pub-quality': 'Generate a publication-quality plot.',
