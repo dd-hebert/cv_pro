@@ -68,6 +68,7 @@ class CV_Plot:
             self.peaks = voltammogram.peaks
             self.E_halfs = voltammogram.E_halfs
             self.peak_separations = voltammogram.peak_separations
+            self.init_sweep_direction = voltammogram.parameters.init_sweep_direction
 
             if pub_quality:
                 self.plot_CV_publication_quality()
@@ -113,11 +114,12 @@ class CV_Plot:
         """
         fig, ax = self._create_plot()
         plt.title(None)
-        plt.xticks(fontsize='small')
+        plt.xticks(fontsize='large')
+        plt.tick_params('x', width=1.5, length=6)
         if self.reference != 0:
-            plt.xlabel('${{E}}$ (V vs. Fc$^{{0/+}}$)', fontsize='small')
+            plt.xlabel('${{E}}$ (V vs. Fc$^{{+/0}}$)', fontsize='large')
         else:
-            plt.xlabel('${{E}}$ (V)', fontsize='small')
+            plt.xlabel('${{E}}$ (V)', fontsize='large')
 
         self._plot_cv_curves(ax)
         [line.set(linewidth=2, color='black') for line in ax.get_lines()]
@@ -125,11 +127,12 @@ class CV_Plot:
         self._add_sweep_direction_arrow(ax)
 
         ax.get_yaxis().set_visible(False)
-        [ax.spines[side].set_visible(False) for side in ['top', 'left', 'right']]
+        # [ax.spines[side].set_visible(False) for side in ['top', 'left', 'right']]
+        ax.spines[:].set_linewidth(1.5)
 
         ax.set_ylim(ax.get_ylim()[0] * 1.5, ax.get_ylim()[1] * 1.5)
         ax.set_xlim(round(ax.get_xlim()[0], 1), round(ax.get_xlim()[1], 1))
-
+        plt.tight_layout()
         plt.show()
 
     def _create_plot(self):
@@ -188,7 +191,7 @@ class CV_Plot:
             ax.text(
                 0.99,
                 0.01,
-                f'Fc/Fc+ = {self.reference} V',
+                f'Fc+/Fc = {self.reference} V',
                 verticalalignment='bottom',
                 horizontalalignment='right',
                 transform=ax.transAxes,
@@ -196,28 +199,35 @@ class CV_Plot:
                 fontsize=8,
             )
 
-    def _add_sweep_direction_arrow(self, ax):
+    def _add_sweep_direction_arrow(
+        self, ax, arrow_length=20, width=0.5, headwidth=8, headlength=8, color="black"
+    ):
         segment = self.segments[0]
-        segment_midpoint = len(segment.processed) // 2
-        arrow_length = 20
-        arrow_width = 0.5
-        arrow_headwidth = 8
-        arrow_headlength = 8
+        n_points = len(segment.processed)
+        segment_midpoint = n_points // 2
+        offset = min(arrow_length, n_points - segment_midpoint - 1)
 
-        arrow_x1 = segment.processed.index[segment_midpoint + arrow_length]
-        arrow_x2 = segment.processed.index[segment_midpoint]
+        # Coordinates
+        x1 = segment.processed.index[segment_midpoint + offset]
+        y1 = segment.processed.iloc[segment_midpoint + offset]
+        x2 = segment.processed.index[segment_midpoint]
+        y2 = segment.processed.iloc[segment_midpoint]
 
-        arrow_y1 = segment.processed.iloc[segment_midpoint + arrow_length]
-        arrow_y2 = segment.processed.iloc[segment_midpoint]
+        # Direction: even vs odd segment
+        if segment.index % 2 == 0:
+            start, end = (x2, y2), (x1, y1)
+        else:
+            start, end = (x1, y1), (x2, y2)
 
+        # Draw arrow
         ax.annotate(
-            '',
-            xy=(arrow_x1, arrow_y1),
-            xytext=(arrow_x2, arrow_y2),
+            "",
+            xy=end,
+            xytext=start,
             arrowprops=dict(
-                width=arrow_width,
-                headwidth=arrow_headwidth,
-                headlength=arrow_headlength,
-                color='black',
+                width=width,
+                headwidth=headwidth,
+                headlength=headlength,
+                color=color,
             ),
         )
