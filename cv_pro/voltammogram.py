@@ -137,6 +137,13 @@ class Voltammogram:
         if end >= len(self.segments) or end == -1:
             end = len(self.segments)
 
+        if start > end:
+            raise ValueError(
+                f"Invalid trim indices: start={start}, end={end}. "
+                "Start must be <= end. Did you mean --trim "
+                f"{end} {start}?"
+            )
+
         self.trim = (start, end)
 
     def export_csv(
@@ -145,9 +152,6 @@ class Voltammogram:
         data_type: Literal['raw', 'processed'] = 'processed',
         suffix: str | None = None,
     ) -> None:
-        df = pd.concat([getattr(segment, data_type) for segment in segments], axis=1)
-        df.columns = [
-            f'Segment_{segment.index + 1} Current (A)' for segment in segments
-        ]
-        df.sort_index(inplace=True)
-        return export_csv(df, self.path.parent, Path(self.name).stem, suffix=suffix)
+        ser = pd.concat([getattr(segment, data_type) for segment in segments], axis=0)
+        ser.name = 'Current (A)'
+        return export_csv(ser, self.path.parent, Path(self.name).stem, suffix=suffix)
