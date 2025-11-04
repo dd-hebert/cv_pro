@@ -1,6 +1,17 @@
 ``cv_pro``
 ==========
-``cv_pro`` is a command line tool for processing CV data files (.bin format) created from the CH Instruments chi760e electrochemical workstation.
+``cv_pro`` is a command line tool for processing CV data files (``.bin`` format) created from the CH Instruments chi760e electrochemical workstation.
+
+Key Features
+------------
+✅ Parse binary ``.bin`` files and export as directly plottable and nicely formatted ``.csv`` files
+
+✅ Process CV traces (truncate segments, x-axis correction)
+
+✅ Automatic determination of E½ values
+
+✅ Interactive plotting with Matplotlib
+
 
 Contents
 --------
